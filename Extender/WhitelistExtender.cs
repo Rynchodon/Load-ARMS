@@ -127,7 +127,7 @@ namespace Extender
 		private static void WriteLine(string line, [CallerMemberName] string memberName = null)
 		{
 			line = memberName + ": " + line;
-			Console.WriteLine(line);
+			//Console.WriteLine(line);
 
 			if (_log == null)
 				_log = new StreamWriter(LOG_NAME);

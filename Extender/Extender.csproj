@@ -69,6 +69,7 @@
     </Reference>
     <Reference Include="SpaceEngineers.Game">
       <HintPath>..\..\..\..\..\..\..\..\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -80,6 +81,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="VRage.Game">
       <HintPath>..\..\..\..\..\..\..\..\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Game.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="VRage.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
