@@ -66,6 +66,7 @@ namespace Extender
 							if (Path.GetFileName(assembly) == "SpaceEngineers.Game.dll")
 							{
 								WriteLine("IL Compiler has requisite assemblies");
+								Thread.Sleep(1000);
 								return true;
 							}
 							else
@@ -88,6 +89,8 @@ namespace Extender
 				using (var handle = MyScriptCompiler.Static.Whitelist.OpenBatch())
 				{
 					handle.AllowNamespaceOfTypes(MyWhitelistTarget.ModApi,
+						typeof(Entities.Blocks.MySpaceProjector),
+						typeof(Sandbox.Engine.Voxels.IMyIsoMesher),
 						typeof(Sandbox.Game.Entities.Blocks.IMyTriggerableBlock),
 						typeof(Sandbox.Game.Entities.Cube.ConnectivityResult),
 						typeof(Sandbox.Game.Gui.HudBlockInfoExtensions),
@@ -95,8 +98,6 @@ namespace Extender
 						typeof(Sandbox.Game.World.MyAudioComponent),
 						typeof(SpaceEngineers.Game.Entities.Blocks.MyAirVent),
 						typeof(VRage.Game.Gui.MyHudEntityParams));
-
-					handle.AllowTypes(MyWhitelistTarget.ModApi, typeof(Entities.Blocks.MySpaceProjector));
 
 					handle.AllowTypes(MyWhitelistTarget.ModApi,
 						typeof(System.ArgumentOutOfRangeException),

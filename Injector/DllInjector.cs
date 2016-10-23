@@ -57,7 +57,7 @@ namespace Injector
 						{
 							WriteLine("Alternate launch");
 							Process.Start(launcher);
-							Thread.Sleep(100);
+							Thread.Sleep(1000);
 						}
 						else
 						{
@@ -74,9 +74,10 @@ namespace Injector
 			if (process == null)
 				return;
 
-			Thread.Sleep(1000);
+			Thread.Sleep(5000);
 
-			Inject(process, dllPath);
+			if (!Inject(process, dllPath))
+				return;
 
 			TextReader reader = new StreamReader(Extender.WhitelistExtender.LOG_NAME);
 			string line;
@@ -97,25 +98,51 @@ namespace Injector
 			return newest;
 		}
 
-		private static Process WaitForGameStart(bool isDedicatedServer)
+		private static Process WaitForGameStart(bool isDedicatedServer, int seconds = 600)
 		{
-			for (int c = 0; c < 6000; c++)
+			Process process = null;
+
+			// wait for process
+
+			int waitCount = seconds * 10;
+			for (int c = 0; c < waitCount; c++)
 			{
 				Thread.Sleep(100);
-				Process process = GetGameProcess(isDedicatedServer);
+				process = GetGameProcess(isDedicatedServer);
 
-				if (process == null)
+				if (process != null)
+					break;
+			}
+
+			if (process == null)
+			{
+				WriteLine("Game did not start");
+				return null;
+			}
+
+			if (!isDedicatedServer)
+				return process;
+
+			// wait for title
+
+			for (int c2 = 0; c2 < 6000; c2++)
+			{
+				Thread.Sleep(100);
+
+				if (process.HasExited)
 				{
-					if (c > 600)
-						break;
+					WriteLine("Game terminated before it finished loading");
+					return null;
 				}
-				else if (!string.IsNullOrWhiteSpace(process.MainWindowTitle))
+
+				process.Refresh();
+				if (!string.IsNullOrWhiteSpace(process.MainWindowTitle))
 				{
-					if (isDedicatedServer && (process.MainWindowTitle.Contains("Select Instance") || process.MainWindowTitle.Contains("configurator")))
+					if ((process.MainWindowTitle.Contains("Select Instance") || process.MainWindowTitle.Contains("configurator")))
 					{
 						WriteLine("Configurator is running");
 						process.WaitForExit();
-						return WaitForGameStart(isDedicatedServer);
+						return WaitForGameStart(isDedicatedServer, 10);
 					}
 					return process;
 				}
@@ -169,7 +196,7 @@ namespace Injector
 					return false;
 				}
 
-				if (Kernel32Wrapper.WaitForSingleObject(hThread, 10000) != 0)
+				if (Kernel32Wrapper.WaitForSingleObject(hThread, 60000) != 0)
 				{
 					WriteLine("Loading thread timed out");
 					return false;

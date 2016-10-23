@@ -88,6 +88,10 @@
       <HintPath>..\..\..\..\..\..\..\..\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Library.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="VRage.Math">
+      <HintPath>..\..\..\..\..\..\..\..\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Math.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="VRage.Scripting">
       <HintPath>..\..\..\..\..\..\..\..\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Scripting.dll</HintPath>
       <Private>False</Private>
