@@ -10,7 +10,7 @@ namespace Rynchodon
 
 		public static void CreateRelease(string userAgent, string oAuthToken, Release release, params string[] assetsPaths)
 		{
-			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/Autopilot/releases");
+			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/ARMS/releases");
 			request.UserAgent = userAgent;
 			request.Method = "POST";
 			request.Headers.Add("Authorization", "token " + oAuthToken);
@@ -25,7 +25,7 @@ namespace Rynchodon
 			{
 				string fileName = Path.GetFileName(asset);
 				Console.WriteLine("Posting asset: " + fileName);
-				request = WebRequest.CreateHttp(@"https://uploads.github.com/repos/Rynchodon/Autopilot/releases/" + release.id + "/assets?name=" + fileName);
+				request = WebRequest.CreateHttp(@"https://uploads.github.com/repos/Rynchodon/ARMS/releases/" + release.id + "/assets?name=" + fileName);
 				request.UserAgent = userAgent;
 				request.Method = "POST";
 				request.ContentType = "application/dll";
@@ -41,7 +41,7 @@ namespace Rynchodon
 
 		public static Release[] GetReleases(string userAgent)
 		{
-			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/Autopilot/releases");
+			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/ARMS/releases");
 			request.UserAgent = userAgent;
 			WebResponse response;
 			response = request.GetResponse();
