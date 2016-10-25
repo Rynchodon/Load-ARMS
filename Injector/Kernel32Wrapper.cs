@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Injector
+namespace Rynchodon.Injector
 {
 	public static class Kernel32Wrapper
 	{

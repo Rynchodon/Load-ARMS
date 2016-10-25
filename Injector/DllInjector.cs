@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Injector
+namespace Rynchodon.Injector
 {
 	class DllInjector
 	{
@@ -25,12 +25,14 @@ namespace Injector
 			Task update = new Task(ArmsUpdater.UpdateArms);
 			update.Start();
 
+			(new Task(DoCleanup)).Start();
+
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			string dllPath = myDirectory + "\\ExtendWhitelist.dll";
+			string dllPath = myDirectory + "\\LoadARMS.dll";
 
 			if (!File.Exists(dllPath))
 			{
-				WriteLine("ExtendWhitelist.dll not found");
+				WriteLine("LoadARMS.dll not found");
 				return;
 			}
 
@@ -82,6 +84,13 @@ namespace Injector
 
 			update.Wait();
 			Inject(process, dllPath);
+		}
+
+		private static void DoCleanup()
+		{
+			foreach (string remove in new string[] { "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log" })
+				if (File.Exists(remove))
+					File.Delete(remove);
 		}
 
 		private static Process GetGameProcess(bool isDedicatedServer)

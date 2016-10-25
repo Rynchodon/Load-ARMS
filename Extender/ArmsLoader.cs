@@ -13,7 +13,7 @@ namespace Extender
 	public class ArmsLoader
 	{
 
-		public const string LOG_NAME = "ExtendWhitelist.log";
+		public const string LOG_NAME = "LoadARMS.log";
 
 		static TextWriter _log;
 		static Assembly _armsAssembly;
@@ -32,7 +32,7 @@ namespace Extender
 					return;
 				}
 
-				WriteLine("Trying to load:\n" + dllPath);
+				WriteLine("Trying to load " + dllPath);
 				_armsAssembly = Assembly.LoadFile(dllPath);
 
 				if (_armsAssembly == null)
@@ -41,18 +41,18 @@ namespace Extender
 					return;
 				}
 				
-				MySession.OnLoading += CheckForArmsAndLoad;
+				MySession.OnLoading += CheckForArmsAndRegister;
 
 				WriteLine("ARMS ready");
 			}
 			catch (Exception ex)
 			{
-				MySession.OnLoading -= CheckForArmsAndLoad;
+				MySession.OnLoading -= CheckForArmsAndRegister;
 				WriteLine(ex.ToString());
 			}
 		}
 
-		private static void CheckForArmsAndLoad()
+		private static void CheckForArmsAndRegister()
 		{
 			if (MyDefinitionManager.Static.GetCubeBlockDefinition(new SerializableDefinitionId(typeof(MyObjectBuilder_Cockpit), "Autopilot-Block_Large")) == null)
 				return;
