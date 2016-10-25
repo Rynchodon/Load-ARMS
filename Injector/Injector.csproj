@@ -62,14 +62,20 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="VRage.Game">
+      <HintPath>..\..\..\..\..\..\..\..\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Game.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArmsUpdater.cs" />
     <Compile Include="Kernel32Wrapper.cs" />
     <Compile Include="DllInjector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -79,9 +85,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Extender\Extender.csproj">
+    <ProjectReference Include="..\Extender\Loader.csproj">
       <Project>{5c2d3832-ddcb-4c1d-855c-5510625db149}</Project>
-      <Name>Extender</Name>
+      <Name>Loader</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Injector
 {
@@ -12,8 +13,6 @@ namespace Injector
 	{
 
 		const string processNameSE = "SpaceEngineers", processNameSED = "SpaceEngineersDedicated";
-
-		//static TextWriter _log = new StreamWriter("DllInjector.log");
 
 		static void Main(string[] args)
 		{
@@ -23,6 +22,9 @@ namespace Injector
 
 		private static void Run()
 		{
+			Task update = new Task(ArmsUpdater.UpdateArms);
+			update.Start();
+
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string dllPath = myDirectory + "\\ExtendWhitelist.dll";
 
@@ -57,7 +59,8 @@ namespace Injector
 						{
 							WriteLine("Alternate launch");
 							Process.Start(launcher);
-							Thread.Sleep(1000);
+							process = WaitForGameStart(false);
+							process.WaitForExit(3000);
 						}
 						else
 						{
@@ -74,16 +77,11 @@ namespace Injector
 			if (process == null)
 				return;
 
+			// TODO: this is arbitrary, come up with a test
 			Thread.Sleep(5000);
 
-			if (!Inject(process, dllPath))
-				return;
-
-			TextReader reader = new StreamReader(Extender.WhitelistExtender.LOG_NAME);
-			string line;
-			while ((line = reader.ReadLine()) != null)
-				WriteLine(line, true);
-			reader.Close();
+			update.Wait();
+			Inject(process, dllPath);
 		}
 
 		private static Process GetGameProcess(bool isDedicatedServer)
@@ -224,14 +222,17 @@ namespace Injector
 					return false;
 				}
 
-				WriteLine("Waiting for game to finish loading");
-
 				while (Kernel32Wrapper.WaitForSingleObject(hThread, 1000) != 0)
+				{
+					process.Refresh();
 					if (process.HasExited)
 					{
-						WriteLine("Game terminated before it finished loading");
+						WriteLine("Game terminated before ARMS.dll could be loaded");
 						return false;
 					}
+				}
+
+				WriteLine("Loaded ARMS.dll");
 			}
 			finally
 			{
@@ -250,10 +251,8 @@ namespace Injector
 		private static void WriteLine(string line, bool skipMemeberName = false, [CallerMemberName] string memberName = null)
 		{
 			if (!skipMemeberName)
-				line = memberName + ": " + line;
+				line = DateTime.Now + ": " + line;
 			Console.WriteLine(line);
-			//_log.WriteLine(line);
-			//_log.Flush();
 		}
 
 	}

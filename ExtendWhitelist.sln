@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extender", "Extender\Extender.csproj", "{5C2D3832-DDCB-4C1D-855C-5510625DB149}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loader", "Extender\Loader.csproj", "{5C2D3832-DDCB-4C1D-855C-5510625DB149}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Injector", "Injector\Injector.csproj", "{081B3BE0-322B-4E4F-B93E-50AD18487B1D}"
 EndProject
