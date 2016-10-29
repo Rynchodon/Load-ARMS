@@ -27,7 +27,7 @@ namespace Rynchodon
 		}
 
 		[DataMember]
-		public string tag_name, name;
+		public string tag_name, name, body;
 		[DataMember]
 		public long id;
 		[DataMember]

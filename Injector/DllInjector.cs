@@ -16,8 +16,9 @@ namespace Rynchodon.Injector
 
 		static void Main(string[] args)
 		{
-			Run();
-			Thread.Sleep(10000);
+			try { Run(); }
+			catch (Exception ex) { Console.Error.WriteLine(ex); }
+			Thread.Sleep(60000);
 		}
 
 		private static void Run()
@@ -61,8 +62,16 @@ namespace Rynchodon.Injector
 						{
 							WriteLine("Alternate launch");
 							Process.Start(launcher);
-							process = WaitForGameStart(false);
-							process.WaitForExit(3000);
+							process = WaitForGameStart(false, false);
+							while (!process.WaitForExit(100))
+							{
+								process.Refresh();
+								if (!string.IsNullOrWhiteSpace(process.MainWindowTitle))
+								{
+									WriteLine("Window has title");
+									break;
+								}
+							}
 						}
 						else
 						{
@@ -75,14 +84,27 @@ namespace Rynchodon.Injector
 				WriteLine("Game launched");
 			}
 
+			update.Wait();
+
+			if (!File.Exists(ArmsUpdater.ArmsReleaseNotes))
+			{
+				WriteLine("ERROR: No release notes found");
+			}
+			else
+			{
+				StreamReader reader = new StreamReader(ArmsUpdater.ArmsReleaseNotes);
+				Version currentVersion = new Version(FileVersionInfo.GetVersionInfo(ArmsUpdater.ArmsDll));
+
+				Console.WriteLine();
+				Console.Write("Release notes for ARMS version ");
+				Console.WriteLine(currentVersion.ToString());
+				Console.WriteLine(reader.ReadToEnd());
+				Console.WriteLine();
+			}
+
 			process = WaitForGameStart(isDedicatedServer);
 			if (process == null)
 				return;
-
-			// TODO: this is arbitrary, come up with a test
-			Thread.Sleep(5000);
-
-			update.Wait();
 			Inject(process, dllPath);
 		}
 
@@ -105,7 +127,7 @@ namespace Rynchodon.Injector
 			return newest;
 		}
 
-		private static Process WaitForGameStart(bool isDedicatedServer, int seconds = 600)
+		private static Process WaitForGameStart(bool isDedicatedServer, bool needTitle = true, int seconds = 600)
 		{
 			Process process = null;
 
@@ -127,7 +149,7 @@ namespace Rynchodon.Injector
 				return null;
 			}
 
-			if (!isDedicatedServer)
+			if (!needTitle)
 				return process;
 
 			// wait for title
@@ -145,11 +167,11 @@ namespace Rynchodon.Injector
 				process.Refresh();
 				if (!string.IsNullOrWhiteSpace(process.MainWindowTitle))
 				{
-					if ((process.MainWindowTitle.Contains("Select Instance") || process.MainWindowTitle.Contains("configurator")))
+					if ((process.MainWindowTitle.Contains(" - Select Instance of Dedicated server") || process.MainWindowTitle.Contains(" - Dedicated server configurator"))) // these are hard-coded
 					{
 						WriteLine("Configurator is running");
 						process.WaitForExit();
-						return WaitForGameStart(isDedicatedServer, 10);
+						return WaitForGameStart(isDedicatedServer, seconds: 10);
 					}
 					return process;
 				}

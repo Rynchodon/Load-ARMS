@@ -10,7 +10,7 @@ namespace Rynchodon
 {
 	public static class ArmsUpdater
 	{
-		private const string ArmsDll = "ARMS.dll";
+		public const string ArmsDll = "ARMS.dll", ArmsReleaseNotes = "ARMS - Release Notes.txt";
 
 		public static void UpdateArms()
 		{
@@ -66,6 +66,7 @@ namespace Rynchodon
 			response.GetResponseStream().CopyTo(file);
 			file.Close();
 
+			File.WriteAllText(ArmsReleaseNotes, bestRelease.body);
 			WriteLine("ARMS has been updated");
 		}
 		
