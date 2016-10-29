@@ -33,7 +33,7 @@ namespace Rynchodon
 
 			if (bestRelease == null)
 			{
-				WriteLine("No releases found");
+				WriteLine("ERROR: No releases found");
 				return;
 			}
 
@@ -47,7 +47,7 @@ namespace Rynchodon
 
 			if (asset == null)
 			{
-				WriteLine("Could not get asset");
+				WriteLine("ERROR: Could not get asset");
 				return;
 			}
 

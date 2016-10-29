@@ -21,7 +21,7 @@ namespace Rynchodon
 		private class Create
 		{
 			[DataMember]
-			public string tag_name;
+			public string tag_name, body;
 			[DataMember]
 			public bool draft, prerelease;
 		}
@@ -59,7 +59,7 @@ namespace Rynchodon
 
 		public void WriteCreateJson(Stream writeTo)
 		{
-			Create c = new Create() { tag_name = tag_name, draft = draft, prerelease = prerelease };
+			Create c = new Create() { tag_name = tag_name, body = body, draft = draft, prerelease = prerelease };
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Create));
 			serializer.WriteObject(writeTo, c);
 		}
