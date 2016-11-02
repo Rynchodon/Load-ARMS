@@ -7,9 +7,33 @@ using System.Runtime.Serialization.Json;
 namespace Rynchodon
 {
 	[DataContract]
-	public class Release : IComparable<Release>
+	public class CreateRelease
 	{
-#pragma warning disable CS0649
+		[DataMember]
+		public string tag_name, body;
+		[DataMember]
+		public bool draft, prerelease;
+
+		public CreateRelease() { }
+
+		public CreateRelease(CreateRelease copy)
+		{
+			this.tag_name = copy.tag_name;
+			this.body = copy.body;
+			this.draft = copy.draft;
+			this.prerelease = copy.prerelease;
+		}
+
+		public void WriteCreateJson(Stream writeTo)
+		{
+			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(CreateRelease));
+			serializer.WriteObject(writeTo, new CreateRelease(this));
+		}
+	}
+
+	[DataContract]
+	public class Release : CreateRelease, IComparable<Release>
+	{
 		[DataContract]
 		public class Asset
 		{
@@ -17,24 +41,12 @@ namespace Rynchodon
 			public string name, browser_download_url;
 		}
 
-		[DataContract]
-		private class Create
-		{
-			[DataMember]
-			public string tag_name, body;
-			[DataMember]
-			public bool draft, prerelease;
-		}
-
 		[DataMember]
-		public string tag_name, name, body;
+		public string name;
 		[DataMember]
 		public long id;
 		[DataMember]
-		public bool draft, prerelease;
-		[DataMember]
 		public Asset[] assets;
-#pragma warning restore CS0649
 
 		private Version value_version;
 
@@ -55,13 +67,6 @@ namespace Rynchodon
 			if (this.prerelease != other.prerelease)
 				return this.prerelease ? int.MinValue : int.MaxValue;
 			return this.Version.CompareTo(other.Version);
-		}
-
-		public void WriteCreateJson(Stream writeTo)
-		{
-			Create c = new Create() { tag_name = tag_name, body = body, draft = draft, prerelease = prerelease };
-			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Create));
-			serializer.WriteObject(writeTo, c);
 		}
 	}
 }

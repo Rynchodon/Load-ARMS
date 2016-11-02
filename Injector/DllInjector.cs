@@ -100,6 +100,8 @@ namespace Rynchodon.Injector
 				Console.WriteLine(currentVersion.ToString());
 				Console.WriteLine(reader.ReadToEnd());
 				Console.WriteLine();
+
+				reader.Dispose();
 			}
 
 			process = WaitForGameStart(isDedicatedServer);

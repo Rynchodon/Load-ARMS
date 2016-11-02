@@ -2,16 +2,15 @@
 using System.IO;
 using System.Net;
 using System.Runtime.Serialization.Json;
-using System.Threading.Tasks;
 
 namespace Rynchodon
 {
 	public class GitHubClient
 	{
 
-		public static void CreateRelease(string userAgent, string oAuthToken, Release release, params string[] assetsPaths)
+		public static void CreateRelease(string repo, string userAgent, string oAuthToken, Release release, params string[] assetsPaths)
 		{
-			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/ARMS/releases");
+			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/" + repo + "/releases");
 			request.UserAgent = userAgent;
 			request.Method = "POST";
 			request.Headers.Add("Authorization", "token " + oAuthToken);
@@ -28,47 +27,30 @@ namespace Rynchodon
 			foreach (string asset in assetsPaths)
 			{
 				string fileName = Path.GetFileName(asset);
-				Console.Write("Posting asset " + fileName + ": ");
+				request = WebRequest.CreateHttp(@"https://uploads.github.com/repos/Rynchodon/" + repo + "/releases/" + release.id + "/assets?name=" + fileName);
+				request.UserAgent = userAgent;
+				request.Method = "POST";
+				request.ContentType = "application/" + Path.GetExtension(fileName);
+				request.Headers.Add("Authorization", "token " + oAuthToken);
 
-				using (WebClient client = new WebClient())
-				{
-					client.Headers.Add(HttpRequestHeader.UserAgent, userAgent);
-					client.Headers.Add(HttpRequestHeader.ContentType, "application/dll");
-					client.Headers.Add(HttpRequestHeader.Authorization, "token " + oAuthToken);
+				Stream upStream = request.GetRequestStream();
+				FileStream fileRead = new FileStream(asset, FileMode.Open);
 
-					int cursorLeft = Console.CursorLeft, cursorTop = Console.CursorTop;
-					long lastPercent = -1L;
-					object locker = new object();
-					UploadProgressChangedEventHandler handler = (sender, e) => {
-						long percent = e.BytesSent * 100L / e.TotalBytesToSend;
-						lock (locker)
-						{
-							if (percent == lastPercent)
-								return;
-							lastPercent = percent;
-							Console.SetCursorPosition(cursorLeft, cursorTop);
-							if (percent < 10)
-								Console.Write(' ');
-							if (percent < 100)
-								Console.Write(' ');
-							Console.Write(percent);
-							Console.Write('%');
-						}
-					};
+				fileRead.CopyTo(upStream);
+				Console.WriteLine("Posting: " + fileName);
+				request.GetResponse().Dispose();
 
-					client.UploadProgressChanged += handler;
-					Task uploadTask = client.UploadFileTaskAsync(@"https://uploads.github.com/repos/Rynchodon/ARMS/releases/" + release.id + "/assets?name=" + fileName, asset);
-					uploadTask.Wait();
-					uploadTask.Dispose();
-				}
-
-				Console.WriteLine();
+				fileRead.Dispose();
+				upStream.Dispose();
 			}
+
+			Console.WriteLine();
+			Console.WriteLine("Release successful");
 		}
 
-		public static Release[] GetReleases(string userAgent)
+		public static Release[] GetReleases(string repo, string userAgent)
 		{
-			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/ARMS/releases");
+			HttpWebRequest request = WebRequest.CreateHttp(@"https://api.github.com/repos/Rynchodon/" + repo + "/releases");
 			request.UserAgent = userAgent;
 			using (WebResponse response = request.GetResponse())
 			{

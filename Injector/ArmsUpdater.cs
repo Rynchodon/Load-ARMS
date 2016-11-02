@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -10,15 +11,14 @@ namespace Rynchodon
 {
 	public static class ArmsUpdater
 	{
-		public const string ArmsDll = "ARMS.dll", ArmsReleaseNotes = "ARMS - Release Notes.txt";
+		public const string ArmsZip = "ARMS.zip", ArmsDll = "ARMS.dll", ArmsReleaseNotes = "ARMS - Release Notes.txt", User_Agent = "ARMS-Updater";
 
 		public static void UpdateArms()
 		{
 			const string stable = "-stable", unstable = "-unstable";
-			const string userAgent = "ARMS-Updater";
 
 			Release[] allReleases;
-			try { allReleases = GitHubClient.GetReleases(userAgent); }
+			try { allReleases = GitHubClient.GetReleases("ARMS", User_Agent); }
 			catch (WebException ex)
 			{
 				WriteLine("Failed to connect to github:\n" + ex);
@@ -39,11 +39,15 @@ namespace Rynchodon
 
 			Release.Asset asset = null;
 			foreach (Release.Asset a in bestRelease.assets)
-				if (a.name == ArmsDll)
+			{
+				if (a.name == ArmsZip)
 				{
 					asset = a;
 					break;
 				}
+				if (a.name == ArmsDll)
+					asset = a;
+			}
 
 			if (asset == null)
 			{
@@ -57,14 +61,7 @@ namespace Rynchodon
 				return;
 			}
 
-			WriteLine("Downloading update: " + bestRelease.BestName);
-			HttpWebRequest request = WebRequest.CreateHttp(asset.browser_download_url);
-			request.UserAgent = userAgent;
-			WebResponse response = request.GetResponse();
-
-			FileStream file = File.Create("ARMS.dll");
-			response.GetResponseStream().CopyTo(file);
-			file.Close();
+			DownloadAsset(bestRelease, asset);
 
 			File.WriteAllText(ArmsReleaseNotes, bestRelease.body);
 			WriteLine("ARMS has been updated");
@@ -78,6 +75,36 @@ namespace Rynchodon
 
 			Version currentVersion = new Version(FileVersionInfo.GetVersionInfo(armsDllPath));
 			return rel.Version.CompareTo(currentVersion) > 0;
+		}
+
+		private static void DownloadAsset(Release bestRelease, Release.Asset asset)
+		{
+			WriteLine("Downloading update: " + bestRelease.BestName);
+			HttpWebRequest request = WebRequest.CreateHttp(asset.browser_download_url);
+			request.UserAgent = User_Agent;
+
+			WebResponse response = request.GetResponse();
+			Stream responseStream = response.GetResponseStream();
+
+			if (asset.name == ArmsZip)
+			{
+				FileStream zipFile = File.Create(ArmsZip);
+				responseStream.CopyTo(zipFile);
+				zipFile.Dispose();
+				ZipFile.ExtractToDirectory(ArmsZip, ".");
+				File.Delete(ArmsZip);
+			}
+			else if (asset.name == ArmsDll)
+			{
+				FileStream dllFile = File.Create(ArmsDll);
+				responseStream.CopyTo(dllFile);
+				dllFile.Dispose();
+			}
+			else
+				throw new Exception("Unknown asset: " + asset.name);
+
+			responseStream.Dispose();
+			response.Dispose();
 		}
 
 		private static void WriteLine(string line, bool skipMemeberName = false, [CallerMemberName] string memberName = null)

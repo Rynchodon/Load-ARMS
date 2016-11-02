@@ -52,10 +52,10 @@ namespace Rynchodon
 
 		public Version(FileVersionInfo version)
 		{
-			Major = Math.Min(version.FileMajorPart, version.ProductMajorPart);
-			Minor = Math.Min(version.FileMinorPart, version.ProductMinorPart);
-			Build = Math.Min(version.FileBuildPart, version.ProductBuildPart);
-			Revision = Math.Min(version.FilePrivatePart, version.ProductPrivatePart);
+			Major = Math.Max(version.FileMajorPart, version.ProductMajorPart);
+			Minor = Math.Max(version.FileMinorPart, version.ProductMinorPart);
+			Build = Math.Max(version.FileBuildPart, version.ProductBuildPart);
+			Revision = Math.Max(version.FilePrivatePart, version.ProductPrivatePart);
 		}
 
 		public int CompareTo(Version other)
