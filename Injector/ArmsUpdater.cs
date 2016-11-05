@@ -91,6 +91,8 @@ namespace Rynchodon
 				FileStream zipFile = File.Create(ArmsZip);
 				responseStream.CopyTo(zipFile);
 				zipFile.Dispose();
+				if (File.Exists(ArmsDll))
+					File.Delete(ArmsDll);
 				ZipFile.ExtractToDirectory(ArmsZip, ".");
 				File.Delete(ArmsZip);
 			}
