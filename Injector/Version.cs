@@ -1,44 +1,26 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Rynchodon
+namespace LoadArms
 {
+	[DataContract]
 	public struct Version : IComparable<Version>
 	{
-		public readonly int Major, Minor, Build, Revision;
+		private const string stableTag = "-stable", unstableTag = "-unstable";
 
-		public Version(int major, int minor, int build, int revision = 0)
-		{
-			this.Major = major;
-			this.Minor = minor;
-			this.Build = build;
-			this.Revision = revision;
-		}
+		[DataMember]
+		public int Major, Minor, Build, Revision;
+		[DataMember]
+		public bool StableBuild, UnstableBuild;
 
-		public Version(int revision)
+		public Version(string versionString)
 		{
-			this.Major = this.Minor = this.Build = 0;
-			this.Revision = revision;
-		}
-
-		public Version(string version)
-		{
-			Regex versionParts = new Regex(@"(\d+)\.(\d+)\.(\d+)\.?(\d*)");
-			Match match = versionParts.Match(version);
+			Regex versionParts = new Regex(@"(\d+)\.(\d+)\.?(\d*)\.?(\d*)");
+			Match match = versionParts.Match(versionString);
 
 			if (!match.Success)
-			{
-				// backward compatibility, old versions are considered to be 1.X.0.0
-				if (int.TryParse(version, out this.Minor))
-				{
-					this.Major = 1;
-					this.Build = this.Revision = 0;
-				}
-				else
-					throw new ArgumentException("Could not parse: " + version);
-				return;
-			}
+				throw new ArgumentException("Could not parse: " + versionString);
 
 			string group = match.Groups[1].Value;
 			this.Major = string.IsNullOrWhiteSpace(group) ? 0 : int.Parse(group);
@@ -48,14 +30,12 @@ namespace Rynchodon
 			this.Build = string.IsNullOrWhiteSpace(group) ? 0 : int.Parse(group);
 			group = match.Groups[4].Value;
 			this.Revision = string.IsNullOrWhiteSpace(group) ? 0 : int.Parse(group);
-		}
 
-		public Version(FileVersionInfo version)
-		{
-			Major = Math.Max(version.FileMajorPart, version.ProductMajorPart);
-			Minor = Math.Max(version.FileMinorPart, version.ProductMinorPart);
-			Build = Math.Max(version.FileBuildPart, version.ProductBuildPart);
-			Revision = Math.Max(version.FilePrivatePart, version.ProductPrivatePart);
+			StableBuild = versionString.Contains(stableTag);
+			UnstableBuild = versionString.Contains(unstableTag);
+
+			if (!StableBuild && !UnstableBuild)
+				StableBuild = UnstableBuild = true;
 		}
 
 		public int CompareTo(Version other)
@@ -78,7 +58,12 @@ namespace Rynchodon
 
 		public override string ToString()
 		{
-			return Major + "." + Minor + "." + Build + "." + Revision;
+			string result = "v" + Major + "." + Minor + "." + Build + "." + Revision;
+			if (StableBuild)
+				result += stableTag;
+			if (UnstableBuild)
+				result += unstableTag;
+			return result;
 		}
 	}
 }

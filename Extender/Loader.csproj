@@ -105,7 +105,7 @@
     <Compile Include="..\Injector\Properties\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
-    <Compile Include="ArmsLoader.cs" />
+    <None Include="ArmsLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
