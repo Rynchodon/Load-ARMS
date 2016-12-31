@@ -33,7 +33,7 @@ namespace LoadArms
 		/// Publish a new release.
 		/// </summary>
 		/// <param name="create">Release information, tag_name will be overwritten.</param>
-		/// <param name="assetsPaths">Assets to be included, do not include folders.</param>
+		/// <param name="assetsPaths">Assets to be included, do not include folders. It is recommended that you compress the files and pass the zip file path to this method.</param>
 		public bool PublishRelease(CreateRelease create, params string[] assetsPaths)
 		{
 			if (_oAuthToken == null)
@@ -178,10 +178,10 @@ namespace LoadArms
 		{
 			Release[] releases = GetReleases();
 			if (releases == null)
-			{
-				Logger.WriteLine("No releases");
+				// already complained about it in depth
 				return false;
-			}
+
+			Logger.WriteLine("Searching for update for " + current.mod.author + "." + current.mod.repository);
 
 			Release mostRecent = null;
 			foreach (Release rel in releases)
@@ -222,7 +222,11 @@ namespace LoadArms
 						File.Delete(filePath);
 					}
 
+			Logger.WriteLine("Updating to " + mostRecent.version);
+
 			List<string> filePaths = new List<string>();
+			string destinationDirectory = "mods\\" + current.mod.author + "." + current.mod.repository + "\\";
+			Directory.CreateDirectory(destinationDirectory);
 
 			foreach (Release.Asset asset in mostRecent.assets)
 			{
@@ -232,38 +236,43 @@ namespace LoadArms
 
 				WebResponse response = request.GetResponse();
 				Stream responseStream = response.GetResponseStream();
+				string assetDestination = destinationDirectory + asset.name;
 
 				if (asset.name.EndsWith(".zip"))
 				{
-					const string extractTo = "\\tmp";
-					if (Directory.Exists(extractTo))
-						Directory.Delete(extractTo, true);
-
-					FileStream zipFile = File.Create(asset.name);
+					FileStream zipFile = new FileStream(assetDestination, FileMode.Create);
 					responseStream.CopyTo(zipFile);
 					zipFile.Dispose();
-					ZipFile.ExtractToDirectory(asset.name, extractTo);
-					File.Delete(asset.name);
 
-					foreach (string filePath in Directory.GetFiles(extractTo))
+					ZipArchive archive = ZipFile.OpenRead(assetDestination);
+					foreach (ZipArchiveEntry entry in archive.Entries)
 					{
-						string fileName = Path.GetFileName(filePath);
-						if (File.Exists(fileName))
-							throw new IOException("File already exists: " + fileName);
-						File.Move(filePath, fileName);
-						filePaths.Add(fileName);
-						Logger.WriteLine("File: " + filePath + " => " + fileName);
+						string entryDestination = destinationDirectory + entry.FullName;
+							Directory.CreateDirectory(Path.GetDirectoryName(entryDestination));
+
+						if (File.Exists(entryDestination))
+						{
+							Logger.WriteLine("ERROR: File exists: " + entryDestination);
+							return false;
+						}
+
+						filePaths.Add(entryDestination);
+						entry.ExtractToFile(entryDestination);
 					}
 
-					Directory.Delete(extractTo, true);
+					archive.Dispose();
+					File.Delete(assetDestination);
 				}
 				else
 				{
-					filePaths.Add(asset.name);
+					if (File.Exists(assetDestination))
+					{
+						Logger.WriteLine("ERROR: File exists: " + assetDestination);
+						return false;
+					}
 
-					if (File.Exists(asset.name))
-						throw new IOException("File already exists: " + asset.name);
-					FileStream file = File.Create(asset.name);
+					filePaths.Add(assetDestination);
+					FileStream file = new FileStream(assetDestination, FileMode.CreateNew);
 					responseStream.CopyTo(file);
 					file.Dispose();
 				}
@@ -278,6 +287,7 @@ namespace LoadArms
 			current.locallyCompiled = false;
 			current.filePaths = filePaths.ToArray();
 
+			Logger.WriteLine("Update successful");
 			return true;
 		}
 

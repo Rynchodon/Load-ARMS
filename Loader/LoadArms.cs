@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml;
 using VRage.Plugins;
 
@@ -17,8 +18,8 @@ namespace LoadArms
 
 		private const string
 			launcherArgs = "-plugin LoadArms.exe",
-			configFilePath = "Load-ARMS Config.json",
-			dataFilePath = "Load-ARMS.data";
+			configFilePath = "Config.json",
+			dataFilePath = "Data.json";
 
 		public static void Main(string[] args)
 		{
@@ -37,15 +38,19 @@ namespace LoadArms
 
 			string launcher = myDirectory + "\\SpaceEngineers.exe";
 			if (File.Exists(launcher))
-				Process.Start(launcher, launcherArgs).Dispose();
-			else
 			{
-				launcher = myDirectory + "\\SpaceEngineersDedicated.exe";
-				if (File.Exists(launcher))
-					Process.Start(launcher, launcherArgs).Dispose();
-				else
-					throw new Exception("Not in Space Engineers folder");
+				Process.Start(launcher, launcherArgs).Dispose();
+				return;
 			}
+
+			launcher = myDirectory + "\\SpaceEngineersDedicated.exe";
+			if (File.Exists(launcher))
+			{
+				Process.Start(launcher, launcherArgs).Dispose();
+				return;
+			}
+
+			throw new Exception("Not in Space Engineers folder");
 		}
 
 		[DataContract]
@@ -65,14 +70,30 @@ namespace LoadArms
 		private Config _config;
 		private Data _data;
 		private List<IPlugin> _plugins = new List<IPlugin>();
+		private Task _run;
 
 		public LoadArms()
 		{
+			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+			if (!File.Exists(myDirectory + "\\SpaceEngineers.exe") && !File.Exists(myDirectory + "\\SpaceEngineersDedicated.exe"))
+				throw new Exception("Not in Space Engineers folder");
+
+			myDirectory += ".\\..\\Load-ARMS";
+			Directory.CreateDirectory(myDirectory);
+			Directory.SetCurrentDirectory(myDirectory);
+
 			// self update?? maybe last?
+			_run = new Task(Run);
+			_run.Start();
+		}
+
+		private void Run()
+		{
+			Cleanup();
 			Load();
 			UpdateMods();
 			SaveData();
-			LoadPlugins();
 		}
 
 		public void Dispose()
@@ -82,13 +103,16 @@ namespace LoadArms
 
 			foreach (IPlugin plugin in _plugins)
 				plugin.Dispose();
-
-			_config = default(Config);
-			_plugins = null;
 		}
 
 		public void Init(object gameInstance)
 		{
+			_run.Wait();
+			_run.Dispose();
+			_run = null;
+
+			LoadPlugins();
+
 			foreach (IPlugin plugin in _plugins)
 				plugin.Init(gameInstance);
 		}
@@ -148,7 +172,6 @@ namespace LoadArms
 			}
 
 			_data.ModsCurrentVersions = new List<ModVersion>();
-			_data.ModsCurrentVersions.Add(GetArmsDefaultVersion());
 			SaveData();
 		}
 
@@ -216,7 +239,7 @@ namespace LoadArms
 						string ext = Path.GetExtension(filePath);
 						if (ext == ".dll")
 						{
-							Logger.WriteLine("Loading plugins from " + mod.mod.author + "/" + mod.mod.repository + "/" + filePath);
+							Logger.WriteLine("Loading plugins from " + filePath);
 
 							Assembly assembly = Assembly.LoadFrom(filePath);
 							if (assembly == null)
@@ -224,10 +247,28 @@ namespace LoadArms
 							else
 								foreach (Type t in assembly.ExportedTypes)
 									if (pluginType.IsAssignableFrom(t))
+									{
+										Logger.WriteLine("Plugin: " + t.FullName);
 										try { _plugins.Add((IPlugin)Activator.CreateInstance(t)); }
 										catch (Exception ex) { Logger.WriteLine("ERROR: Could not create instance of type \"" + t.FullName + "\": " + ex); }
+									}
 						}
 					}
+		}
+
+		private void Cleanup()
+		{
+			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\";
+
+			foreach (string fileName in new string[] { "ARMS.dll", "ARMS - Release Notes.txt", "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log", "LoadARMS.dll", "LoadARMS.log" })
+			{
+				string fullPath = myDirectory + fileName;
+				if (File.Exists(fullPath))
+				{
+					Logger.WriteLine("Deleting: " + fullPath);
+					File.Delete(fullPath);
+				}
+			}
 		}
 
 		private ModInfo GetArmsDefaultInfo()
@@ -240,15 +281,5 @@ namespace LoadArms
 			return result;
 		}
 
-		private ModVersion GetArmsDefaultVersion()
-		{
-			ModVersion result = new ModVersion();
-
-			result.mod = GetArmsDefaultInfo();
-			result.filePaths = new string[] { "ARMS.dll", "ARMS - Release Notes.txt", "ExtendWhitelist.exe", "ExtendWhitelist.dll" , "ExtendWhitelist.log" };
-
-			return result;
-		}
-		
 	}
 }
