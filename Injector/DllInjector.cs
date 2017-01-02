@@ -16,7 +16,7 @@ namespace Rynchodon.Injector
 		public static void WriteLine(string line, bool skipMemeberName = false, [CallerMemberName] string memberName = null)
 		{
 			if (!skipMemeberName)
-				line = DateTime.Now + ": " + line;
+				line = DateTime.Now + ": " + memberName + ": " + line;
 			Console.WriteLine(line);
 		}
 
@@ -24,6 +24,9 @@ namespace Rynchodon.Injector
 		{
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string dllPath = myDirectory + "\\LoadARMS.dll";
+
+			if (!File.Exists(dllPath))
+				throw new Exception("LoadARMS.dll not found");
 
 			string dedicatedLauncher = myDirectory + "\\SpaceEngineersDedicated.exe";
 			bool isDedicatedServer = File.Exists(dedicatedLauncher);

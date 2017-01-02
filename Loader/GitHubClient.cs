@@ -200,10 +200,20 @@ namespace Rynchodon.Loader
 				return false;
 			}
 
-			if (mostRecent.version.CompareTo(current.version) <= 0)
+			int relative = mostRecent.version.CompareTo(current.version);
+			if (relative == 0)
 			{
 				Logger.WriteLine("Up-to-date: " + current.version);
 				return false;
+			}
+			if (relative < 0)
+			{
+				if (current.locallyCompiled)
+				{
+					Logger.WriteLine("Locally compiled version: " + current.version);
+					return false;
+				}
+				Logger.WriteLine("Rolling back version: " + current.version);
 			}
 
 			if (mostRecent.assets == null || mostRecent.assets.Length == 0)

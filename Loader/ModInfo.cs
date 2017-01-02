@@ -53,11 +53,12 @@ namespace Rynchodon.Loader
 	{
 		[DataMember]
 		public Version version;
+		/// <summary>Allows version to be greater than latest release.</summary>
 		[DataMember]
 		public bool locallyCompiled;
 		[DataMember]
 		public string[] filePaths;
-		/// <summary>Should not contain subclasses of ModName</summary>
+		/// <summary>Mods that need to be loaded before this one. Should not contain subclasses of ModName.</summary>
 		[DataMember]
 		public ModName[] requirements;
 

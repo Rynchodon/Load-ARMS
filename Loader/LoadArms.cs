@@ -7,10 +7,10 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Xml;
 using RGiesecke.DllExport;
 using Sandbox;
+using Sandbox.Graphics.GUI;
 using VRage.Plugins;
 
 namespace Rynchodon.Loader
@@ -25,6 +25,7 @@ namespace Rynchodon.Loader
 
 		private const string authRyn = "Rynchodon", repoLoad = "Load-ARMS", repoArms = "ARMS";
 
+		/// <summary>If both inject and -plugin are used, there will be two LoadArms. This is a reference to the first one created, the second will be suppressed.</summary>
 		private static LoadArms _instance;
 
 		// Steam generates a popup with this method.
@@ -85,24 +86,12 @@ namespace Rynchodon.Loader
 
 		#endregion
 
-		private static bool CopyIfNeeded(string source, string destination)
-		{
-			FileInfo sourceInfo = new FileInfo(source);
-			FileInfo destInfo = new FileInfo(destination);
-			if (sourceInfo.CreationTimeUtc == destInfo.CreationTimeUtc && sourceInfo.LastWriteTimeUtc == destInfo.LastWriteTimeUtc)
-				return false;
-			string directory = Path.GetDirectoryName(destination);
-			Directory.CreateDirectory(directory);
-			sourceInfo.CopyTo(destination, true);
-			return true;
-		}
-
-		[DllExport]
 		public static void AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string startdir = null)
 		{
 			if (_instance == null)
 				new LoadArms(false);
 			_instance.in_AddLocallyCompiled(author, repo, version, files, startdir);
+			_instance.Robocopy();
 		}
 
 		[DataContract]
@@ -122,7 +111,9 @@ namespace Rynchodon.Loader
 		private string _directory;
 		private Config _config;
 		private Data _data;
-		private Task _task;
+		private ParallelTasks.Task _task;
+		private DownloadProgress.Stats _downProgress = new DownloadProgress.Stats();
+		private bool _startedRobocopy, _loadedPlugins;
 
 		public LoadArms() : this(true) { }
 
@@ -142,10 +133,7 @@ namespace Rynchodon.Loader
 			Logger.logFile = _directory + "Load-ARMS.log";
 
 			if (start)
-			{
-				_task = new Task(Run);
-				_task.Start();
-			}
+				_task = ParallelTasks.Parallel.StartBackground(Run);
 		}
 
 		private void Run()
@@ -158,24 +146,28 @@ namespace Rynchodon.Loader
 
 		public void Dispose()
 		{
-			if (_instance != this)
+			Robocopy();
+		}
+
+		private void Robocopy()
+		{
+			if (_instance != this || _startedRobocopy)
 				return;
+			_startedRobocopy = true;
 
-			string exePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\LoadArms.exe";
-			string updateExe = _directory + "\\mods\\Rynchodon.Load-ARMS\\LoadArms.exe";
-			if (!File.Exists(updateExe))
-				return;
+			Logger.WriteLine("starting robocopy");
 
-			for (int i = 0; i < 60; ++i)
-				try
-				{
-					if (CopyIfNeeded(updateExe, exePath))
-						Logger.WriteLine("Updated " + Path.GetFileName(exePath));
-					return;
-				}
-				catch (UnauthorizedAccessException) { Thread.Sleep(1000); }
+			string first = '"' + _directory + "mods\\Rynchodon.Load-ARMS\" \"" + _directory + "..\\";
+			string second = "\" /copyall /njs /W:1 /xx";
 
-			Logger.WriteLine("ERROR: Failed to update " + Path.GetFileName(exePath));
+			string toBin64 = first + "Bin64" + second;
+			string toDed64 = first + "DedicatedServer64" + second;
+
+			Process robocopy = new Process();
+			robocopy.StartInfo.FileName = "cmd.exe";
+			robocopy.StartInfo.Arguments = "/C robocopy " + toBin64 + " & robocopy " + toDed64;
+			robocopy.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+			robocopy.Start();
 		}
 
 		public void Init(object gameInstance)
@@ -183,15 +175,24 @@ namespace Rynchodon.Loader
 			if (_instance != this)
 				return;
 
-			_task.Wait();
-			_task.Dispose();
-			_task = null;
-
-			foreach (IPlugin plugin in LoadPlugins())
-				plugin.Init(gameInstance);
+			if (!_task.IsComplete)
+				MyGuiSandbox.AddScreen(new DownloadProgress(_task, _downProgress));
 		}
 
-		public void Update() { }
+		public void Update()
+		{
+			if (_instance != this)
+				return;
+
+			if (!_loadedPlugins && _task.IsComplete)
+			{
+				Logger.WriteLine("Finished task, loading plugins");
+				_loadedPlugins = true;
+				foreach (IPlugin plugin in LoadPlugins())
+					plugin.Init(MySandboxGame.Static);
+				_downProgress = null;
+			}
+		}
 
 		private void Load()
 		{
@@ -263,8 +264,13 @@ namespace Rynchodon.Loader
 
 		private void UpdateMods()
 		{
+			_downProgress.TotalMods = _config.GitHubMods.Length;
+			_downProgress.CurrentMod = 0;
+
 			foreach (ModInfo mod in _config.GitHubMods)
 			{
+				++_downProgress.CurrentMod;
+
 				Logger.WriteLine("mod: " + mod.fullName);
 
 				GitHubClient client = new GitHubClient(mod);
@@ -369,7 +375,7 @@ namespace Rynchodon.Loader
 			if (startdir == null)
 				startdir = Environment.CurrentDirectory + '\\';
 
-			List<string> moved = new List<string>();
+			List<string> copied = new List<string>();
 			foreach (string f in files)
 			{
 				string target = _directory + "mods\\" + name.fullName + '\\';
@@ -377,12 +383,12 @@ namespace Rynchodon.Loader
 					target += f.Substring(startdir.Length);
 				else
 					target += f;
-				Logger.WriteLine("Move: " + f + " => " + target);
-				CopyIfNeeded(f, target);
-				moved.Add(target);
+				Logger.WriteLine("Copy: " + f + " to " + target);
+				File.Copy(f, target);
+				copied.Add(target);
 			}
 
-			current.filePaths = moved.ToArray();
+			current.filePaths = copied.ToArray();
 			current.locallyCompiled = true;
 
 			SaveData();

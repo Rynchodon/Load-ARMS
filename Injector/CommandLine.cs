@@ -42,13 +42,13 @@ namespace Rynchodon.Injector
 		{
 			try
 			{
-				thing();
 				if (args == null || args.Length == 0)
 				{
 					DllInjector.Run();
 					return;
 				}
 				Parse(args);
+				DllInjector.WriteLine("Success");
 			}
 			catch (Exception ex)
 			{
@@ -56,23 +56,6 @@ namespace Rynchodon.Injector
 				Thread.Sleep(50000);
 			}
 			Thread.Sleep(10000);
-		}
-
-		private static void thing()
-		{
-			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			string dllPath = myDirectory + "\\LoadARMS.dll";
-
-			if (!File.Exists(dllPath))
-				throw new Exception("LoadARMS.dll not found");
-
-			string updateDll = Path.GetDirectoryName(myDirectory) + "\\Load-ARMS\\mods\\Rynchodon.Load-ARMS\\LoadArms.dll";
-			if (File.Exists(updateDll))
-			{
-				File.Delete(dllPath);
-				File.Move(updateDll, dllPath);
-				DllInjector.WriteLine("Updated " + Path.GetFileName(updateDll));
-			}
 		}
 
 		private static void Parse(string[] args)
@@ -108,6 +91,8 @@ namespace Rynchodon.Injector
 
 			if (filePaths.Count == 0)
 				throw new ArgumentException("No files specified");
+
+			DllInjector.WriteLine("Adding locally compiled mod");
 
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string dllPath = myDirectory + "\\LoadARMS.dll";
