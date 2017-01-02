@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -84,6 +85,26 @@ namespace Rynchodon.Loader
 
 		#endregion
 
+		private static bool CopyIfNeeded(string source, string destination)
+		{
+			FileInfo sourceInfo = new FileInfo(source);
+			FileInfo destInfo = new FileInfo(destination);
+			if (sourceInfo.CreationTimeUtc == destInfo.CreationTimeUtc && sourceInfo.LastWriteTimeUtc == destInfo.LastWriteTimeUtc)
+				return false;
+			string directory = Path.GetDirectoryName(destination);
+			Directory.CreateDirectory(directory);
+			sourceInfo.CopyTo(destination, true);
+			return true;
+		}
+
+		[DllExport]
+		public static void AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string startdir = null)
+		{
+			if (_instance == null)
+				new LoadArms(false);
+			_instance.in_AddLocallyCompiled(author, repo, version, files, startdir);
+		}
+
 		[DataContract]
 		public struct Config
 		{
@@ -95,7 +116,7 @@ namespace Rynchodon.Loader
 		public struct Data
 		{
 			[DataMember]
-			public List<ModVersion> ModsCurrentVersions;
+			public Dictionary<int, ModVersion> ModsCurrentVersions;
 		}
 
 		private string _directory;
@@ -103,7 +124,9 @@ namespace Rynchodon.Loader
 		private Data _data;
 		private Task _task;
 
-		public LoadArms()
+		public LoadArms() : this(true) { }
+
+		private LoadArms(bool start)
 		{
 			if (_instance != null)
 				return;
@@ -118,15 +141,18 @@ namespace Rynchodon.Loader
 			Directory.CreateDirectory(_directory);
 			Logger.logFile = _directory + "Load-ARMS.log";
 
-			_task = new Task(Run);
-			_task.Start();
+			if (start)
+			{
+				_task = new Task(Run);
+				_task.Start();
+			}
 		}
 
 		private void Run()
 		{
 			Cleanup();
 			Load();
-			//UpdateMods();
+			UpdateMods();
 			SaveData();
 		}
 
@@ -143,9 +169,8 @@ namespace Rynchodon.Loader
 			for (int i = 0; i < 60; ++i)
 				try
 				{
-					File.Delete(exePath);
-					File.Move(updateExe, exePath);
-					Logger.WriteLine("Updated " + Path.GetFileName(exePath));
+					if (CopyIfNeeded(updateExe, exePath))
+						Logger.WriteLine("Updated " + Path.GetFileName(exePath));
 					return;
 				}
 				catch (UnauthorizedAccessException) { Thread.Sleep(1000); }
@@ -218,7 +243,7 @@ namespace Rynchodon.Loader
 				}
 			}
 
-			_data.ModsCurrentVersions = new List<ModVersion>();
+			_data.ModsCurrentVersions = new Dictionary<int, ModVersion>();
 			SaveData();
 		}
 
@@ -244,23 +269,20 @@ namespace Rynchodon.Loader
 
 				GitHubClient client = new GitHubClient(mod);
 
-				foreach (ModVersion current in _data.ModsCurrentVersions)
+				int hashCode = mod.GetHashCode();
+				ModVersion current;
+				if (_data.ModsCurrentVersions.TryGetValue(hashCode, out current))
 				{
-					if (mod.Equals(current))
-					{
-						if (client.Update(mod, current, _directory))
-							Logger.WriteLine("Updated");
-						client = null;
-					}
+					if (client.Update(mod, current, _directory))
+						Logger.WriteLine("Updated");
 				}
-
-				if (client != null)
+				else
 				{
-					ModVersion current = new ModVersion(mod);
+					current = new ModVersion(mod);
 					if (client.Update(mod, current, _directory))
 					{
 						Logger.WriteLine("New download");
-						_data.ModsCurrentVersions.Add(current);
+						_data.ModsCurrentVersions.Add(hashCode, current);
 					}
 				}
 			}
@@ -271,7 +293,7 @@ namespace Rynchodon.Loader
 			List<IPlugin> chainedPlugins = new List<IPlugin>();
 			Type pluginType = typeof(IPlugin);
 
-			foreach (ModVersion mod in _data.ModsCurrentVersions)
+			foreach (ModVersion mod in _data.ModsCurrentVersions.Values)
 			{
 				if (mod.author == authRyn && mod.repository == repoLoad)
 					continue;
@@ -314,6 +336,56 @@ namespace Rynchodon.Loader
 			MyPlugins__m_plugins.SetValue(null, allPlugins);
 
 			return chainedPlugins;
+		}
+
+		private void in_AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string startdir = null)
+		{
+			LoadData();
+
+			ModName name = new ModName(author, repo);
+			int hashCode = name.GetHashCode();
+			ModVersion current;
+			if (!_data.ModsCurrentVersions.TryGetValue(hashCode, out current))
+			{
+				current = new ModVersion(name);
+				_data.ModsCurrentVersions.Add(hashCode, current);
+			}
+			if (version != null)
+				current.version = new Version(version);
+			else
+			{
+				Version highest = new Version();
+				foreach (string file in files)
+				{
+					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file));
+					if (highest.CompareTo(fileVersion) < 0)
+						highest = fileVersion;
+				}
+				current.version = highest;
+			}
+			Logger.WriteLine("mod: " + name.fullName + ", compiled version: " + current.version);
+			current.EraseAllFiles();
+
+			if (startdir == null)
+				startdir = Environment.CurrentDirectory + '\\';
+
+			List<string> moved = new List<string>();
+			foreach (string f in files)
+			{
+				string target = _directory + "mods\\" + name.fullName + '\\';
+				if (f.StartsWith(startdir))
+					target += f.Substring(startdir.Length);
+				else
+					target += f;
+				Logger.WriteLine("Move: " + f + " => " + target);
+				CopyIfNeeded(f, target);
+				moved.Add(target);
+			}
+
+			current.filePaths = moved.ToArray();
+			current.locallyCompiled = true;
+
+			SaveData();
 		}
 
 		private void Cleanup()

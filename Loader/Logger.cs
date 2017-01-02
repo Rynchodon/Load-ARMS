@@ -21,7 +21,7 @@ namespace Rynchodon.Loader
 
 			callerPath = Path.GetFileName(callerPath);
 
-			_writer.WriteLine(DateTime.UtcNow.ToString() + ":" + callerPath + ":" + memberName + ":" + lineNumber + ":" + line);
+			_writer.WriteLine(DateTime.Now.ToString() + ":" + callerPath + ":" + memberName + ":" + lineNumber + ":" + line);
 			_writer.Flush();
 		}
 

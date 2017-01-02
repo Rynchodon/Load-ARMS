@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using VRage.Game;
 
 namespace Rynchodon.Loader
 {
@@ -13,6 +15,25 @@ namespace Rynchodon.Loader
 		public int Major, Minor, Build, Revision;
 		[DataMember]
 		public bool StableBuild, UnstableBuild;
+
+		public Version(FileVersionInfo info)
+		{
+			Major = Math.Max(info.FileMajorPart, info.ProductMajorPart);
+			Minor = Math.Max(info.FileMinorPart, info.ProductMinorPart);
+			Build = Math.Max(info.FileBuildPart, info.ProductBuildPart);
+			Revision = Math.Max(info.FilePrivatePart, info.ProductPrivatePart);
+
+			if (MyFinalBuildConstants.IS_STABLE)
+			{
+				StableBuild = true;
+				UnstableBuild = false;
+			}
+			else
+			{
+				StableBuild = false;
+				UnstableBuild = true;
+			}
+		}
 
 		public Version(string versionString)
 		{

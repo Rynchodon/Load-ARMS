@@ -212,13 +212,7 @@ namespace Rynchodon.Loader
 				return false;
 			}
 
-			if (current.filePaths != null)
-				foreach (string filePath in current.filePaths)
-					if (File.Exists(filePath))
-					{
-						Logger.WriteLine("Delete file: " + filePath);
-						File.Delete(filePath);
-					}
+			current.EraseAllFiles();
 
 			Logger.WriteLine("Downloading version: " + mostRecent.version);
 

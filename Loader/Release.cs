@@ -32,6 +32,7 @@ namespace Rynchodon.Loader
 
 		[IgnoreDataMember]
 		private string _tag_name;
+		[IgnoreDataMember]
 		private Version _version;
 
 		[DataMember]

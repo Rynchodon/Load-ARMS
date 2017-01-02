@@ -13,38 +13,17 @@ namespace Rynchodon.Injector
 
 		const string processNameSE = "SpaceEngineers", processNameSED = "SpaceEngineersDedicated";
 
-		static void Main(string[] args)
+		public static void WriteLine(string line, bool skipMemeberName = false, [CallerMemberName] string memberName = null)
 		{
-			try
-			{
-				Run();
-			}
-			catch (Exception ex)
-			{
-				Console.Error.WriteLine(ex);
-				Thread.Sleep(50000);
-			}
-			Thread.Sleep(10000);
+			if (!skipMemeberName)
+				line = DateTime.Now + ": " + line;
+			Console.WriteLine(line);
 		}
 
-		private static void Run()
+		public static void Run()
 		{
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string dllPath = myDirectory + "\\LoadARMS.dll";
-
-			if (!File.Exists(dllPath))
-			{
-				WriteLine("LoadARMS.dll not found");
-				return;
-			}
-
-			string updateDll = Path.GetDirectoryName(myDirectory) + "\\Load-ARMS\\mods\\Rynchodon.Load-ARMS\\LoadArms.dll";
-			if (File.Exists(updateDll))
-			{
-				File.Delete(dllPath);
-				File.Move(updateDll, dllPath);
-				WriteLine("Updated " + Path.GetFileName(updateDll));
-			}
 
 			string dedicatedLauncher = myDirectory + "\\SpaceEngineersDedicated.exe";
 			bool isDedicatedServer = File.Exists(dedicatedLauncher);
@@ -268,13 +247,6 @@ namespace Rynchodon.Injector
 			}
 
 			return true;
-		}
-
-		private static void WriteLine(string line, bool skipMemeberName = false, [CallerMemberName] string memberName = null)
-		{
-			if (!skipMemeberName)
-				line = DateTime.Now + ": " + line;
-			Console.WriteLine(line);
 		}
 
 	}
