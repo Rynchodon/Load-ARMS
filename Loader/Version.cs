@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 
-namespace LoadArms
+namespace Rynchodon.Loader
 {
 	[DataContract]
 	public struct Version : IComparable<Version>

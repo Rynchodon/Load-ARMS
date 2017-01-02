@@ -7,7 +7,7 @@ using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 using VRage.Game;
 
-namespace LoadArms
+namespace Rynchodon.Loader
 {
 	public class GitHubClient
 	{
@@ -174,21 +174,19 @@ namespace LoadArms
 			}
 		}
 
-		public bool Update(ref ModVersion current)
+		public bool Update(ModInfo info, ModVersion current, string destinationDirectory)
 		{
 			Release[] releases = GetReleases();
 			if (releases == null)
 				// already complained about it in depth
 				return false;
 
-			Logger.WriteLine("Searching for update for " + current.mod.author + "." + current.mod.repository);
-
 			Release mostRecent = null;
 			foreach (Release rel in releases)
 			{
 				if (rel.draft)
 					continue;
-				if (rel.prerelease && !current.mod.downloadPreRelease)
+				if (rel.prerelease && !info.downloadPreRelease)
 					continue;
 
 				if (MyFinalBuildConstants.IS_STABLE ? rel.version.StableBuild : rel.version.UnstableBuild)
@@ -222,10 +220,10 @@ namespace LoadArms
 						File.Delete(filePath);
 					}
 
-			Logger.WriteLine("Updating to " + mostRecent.version);
+			Logger.WriteLine("Downloading version: " + mostRecent.version);
 
 			List<string> filePaths = new List<string>();
-			string destinationDirectory = "mods\\" + current.mod.author + "." + current.mod.repository + "\\";
+			destinationDirectory = destinationDirectory + "mods\\" + info.fullName + "\\";
 			Directory.CreateDirectory(destinationDirectory);
 
 			foreach (Release.Asset asset in mostRecent.assets)
@@ -244,6 +242,7 @@ namespace LoadArms
 					responseStream.CopyTo(zipFile);
 					zipFile.Dispose();
 
+					Logger.WriteLine("Unpacking: " + asset.name);
 					ZipArchive archive = ZipFile.OpenRead(assetDestination);
 					foreach (ZipArchiveEntry entry in archive.Entries)
 					{
@@ -282,12 +281,9 @@ namespace LoadArms
 			}
 
 			current.version = mostRecent.version;
-			current.draft = mostRecent.draft;
-			current.prerelease = mostRecent.prerelease;
 			current.locallyCompiled = false;
 			current.filePaths = filePaths.ToArray();
 
-			Logger.WriteLine("Update successful");
 			return true;
 		}
 

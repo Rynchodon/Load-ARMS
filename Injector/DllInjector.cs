@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rynchodon.Injector
 {
@@ -16,18 +15,20 @@ namespace Rynchodon.Injector
 
 		static void Main(string[] args)
 		{
-			try { Run(); }
-			catch (Exception ex) { Console.Error.WriteLine(ex); }
-			Thread.Sleep(60000);
+			try
+			{
+				Run();
+			}
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine(ex);
+				Thread.Sleep(50000);
+			}
+			Thread.Sleep(10000);
 		}
 
 		private static void Run()
 		{
-			Task update = new Task(ArmsUpdater.UpdateArms);
-			update.Start();
-
-			(new Task(DoCleanup)).Start();
-
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string dllPath = myDirectory + "\\LoadARMS.dll";
 
@@ -35,6 +36,14 @@ namespace Rynchodon.Injector
 			{
 				WriteLine("LoadARMS.dll not found");
 				return;
+			}
+
+			string updateDll = Path.GetDirectoryName(myDirectory) + "\\Load-ARMS\\mods\\Rynchodon.Load-ARMS\\LoadArms.dll";
+			if (File.Exists(updateDll))
+			{
+				File.Delete(dllPath);
+				File.Move(updateDll, dllPath);
+				WriteLine("Updated " + Path.GetFileName(updateDll));
 			}
 
 			string dedicatedLauncher = myDirectory + "\\SpaceEngineersDedicated.exe";
@@ -61,7 +70,7 @@ namespace Rynchodon.Injector
 						if (File.Exists(launcher))
 						{
 							WriteLine("Alternate launch");
-							Process.Start(launcher);
+							Process.Start("steam://rungameid/244850");
 							process = WaitForGameStart(false, false);
 							while (!process.WaitForExit(100))
 							{
@@ -82,26 +91,6 @@ namespace Rynchodon.Injector
 				}
 
 				WriteLine("Game launched");
-			}
-
-			update.Wait();
-
-			if (!File.Exists(ArmsUpdater.ArmsReleaseNotes))
-			{
-				WriteLine("ERROR: No release notes found");
-			}
-			else
-			{
-				StreamReader reader = new StreamReader(ArmsUpdater.ArmsReleaseNotes);
-				Version currentVersion = new Version(FileVersionInfo.GetVersionInfo(ArmsUpdater.ArmsDll));
-
-				Console.WriteLine();
-				Console.Write("Release notes for ARMS version ");
-				Console.WriteLine(currentVersion.ToString());
-				Console.WriteLine(reader.ReadToEnd());
-				Console.WriteLine();
-
-				reader.Dispose();
 			}
 
 			process = WaitForGameStart(isDedicatedServer);
@@ -182,7 +171,7 @@ namespace Rynchodon.Injector
 			WriteLine("Game did not start");
 			return null;
 		}
-		
+
 		private static bool Inject(Process process, string dllPath)
 		{
 			IntPtr hProcess = Kernel32Wrapper.OpenProcess(0x2 | 0x8 | 0x10 | 0x20 | 0x400, true, (uint)process.Id);
@@ -260,12 +249,12 @@ namespace Rynchodon.Injector
 					process.Refresh();
 					if (process.HasExited)
 					{
-						WriteLine("Game terminated before ARMS.dll could be loaded");
+						WriteLine("Game terminated before LoadARMS.dll could be loaded");
 						return false;
 					}
 				}
 
-				WriteLine("Loaded ARMS.dll");
+				WriteLine("Loaded LoadARMS.dll");
 			}
 			finally
 			{

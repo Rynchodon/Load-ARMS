@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 
-namespace LoadArms
+namespace Rynchodon.Loader
 {
 	/// <summary>
 	/// Information about a GitHub account.
