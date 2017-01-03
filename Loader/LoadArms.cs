@@ -86,11 +86,11 @@ namespace Rynchodon.Loader
 
 		#endregion
 
-		public static void AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string startdir = null)
+		public static void AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string basedir = null)
 		{
 			if (_instance == null)
 				new LoadArms(false);
-			_instance.in_AddLocallyCompiled(author, repo, version, files, startdir);
+			_instance.in_AddLocallyCompiled(author, repo, version, files, basedir);
 			_instance.Robocopy();
 		}
 

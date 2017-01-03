@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -12,13 +11,6 @@ namespace Rynchodon.Injector
 	{
 
 		const string processNameSE = "SpaceEngineers", processNameSED = "SpaceEngineersDedicated";
-
-		public static void WriteLine(string line, bool skipMemeberName = false, [CallerMemberName] string memberName = null)
-		{
-			if (!skipMemeberName)
-				line = DateTime.Now + ": " + memberName + ": " + line;
-			Console.WriteLine(line);
-		}
 
 		public static void Run()
 		{
@@ -51,7 +43,7 @@ namespace Rynchodon.Injector
 						string launcher = myDirectory + "\\SpaceEngineers.exe";
 						if (File.Exists(launcher))
 						{
-							WriteLine("Alternate launch");
+							Logger.WriteLine("Alternate launch");
 							Process.Start("steam://rungameid/244850");
 							process = WaitForGameStart(false, false);
 							while (!process.WaitForExit(100))
@@ -59,20 +51,20 @@ namespace Rynchodon.Injector
 								process.Refresh();
 								if (!string.IsNullOrWhiteSpace(process.MainWindowTitle))
 								{
-									WriteLine("Window has title");
+									Logger.WriteLine("Window has title");
 									break;
 								}
 							}
 						}
 						else
 						{
-							WriteLine("Game not found");
+							Logger.WriteLine("Game not found");
 							return;
 						}
 					}
 				}
 
-				WriteLine("Game launched");
+				Logger.WriteLine("Game launched");
 			}
 
 			process = WaitForGameStart(isDedicatedServer);
@@ -118,7 +110,7 @@ namespace Rynchodon.Injector
 
 			if (process == null)
 			{
-				WriteLine("Game did not start");
+				Logger.WriteLine("Game did not start");
 				return null;
 			}
 
@@ -133,7 +125,7 @@ namespace Rynchodon.Injector
 
 				if (process.HasExited)
 				{
-					WriteLine("Game terminated before it finished loading");
+					Logger.WriteLine("Game terminated before it finished loading");
 					return null;
 				}
 
@@ -142,7 +134,7 @@ namespace Rynchodon.Injector
 				{
 					if ((process.MainWindowTitle.Contains(" - Select Instance of Dedicated server") || process.MainWindowTitle.Contains(" - Dedicated server configurator"))) // these are hard-coded
 					{
-						WriteLine("Configurator is running");
+						Logger.WriteLine("Configurator is running");
 						process.WaitForExit();
 						return WaitForGameStart(isDedicatedServer, seconds: 10);
 					}
@@ -150,7 +142,7 @@ namespace Rynchodon.Injector
 				}
 			}
 
-			WriteLine("Game did not start");
+			Logger.WriteLine("Game did not start");
 			return null;
 		}
 
@@ -160,7 +152,7 @@ namespace Rynchodon.Injector
 
 			if (hProcess == IntPtr.Zero)
 			{
-				WriteLine("Failed to get process handle");
+				Logger.WriteLine("Failed to get process handle");
 				return false;
 			}
 
@@ -172,7 +164,7 @@ namespace Rynchodon.Injector
 
 				if (lpStartAddress == IntPtr.Zero)
 				{
-					WriteLine("Failed to get address for load library");
+					Logger.WriteLine("Failed to get address for load library");
 					return false;
 				}
 
@@ -180,13 +172,13 @@ namespace Rynchodon.Injector
 
 				if (lpAddress == IntPtr.Zero)
 				{
-					WriteLine("Failed to allocate memory");
+					Logger.WriteLine("Failed to allocate memory");
 					return false;
 				}
 
 				if (!Kernel32Wrapper.WriteProcessMemory(hProcess, lpAddress, Encoding.ASCII.GetBytes(dllPath), (IntPtr)dllPath.Length))
 				{
-					WriteLine("Failed to write dll name");
+					Logger.WriteLine("Failed to write dll name");
 					return false;
 				}
 
@@ -194,17 +186,17 @@ namespace Rynchodon.Injector
 
 				if (hThread == IntPtr.Zero)
 				{
-					WriteLine("Failed to create loading thread");
+					Logger.WriteLine("Failed to create loading thread");
 					return false;
 				}
 
 				if (Kernel32Wrapper.WaitForSingleObject(hThread, 60000) != 0)
 				{
-					WriteLine("Loading thread timed out");
+					Logger.WriteLine("Loading thread timed out");
 					return false;
 				}
 
-				WriteLine("Dll injected");
+				Logger.WriteLine("Dll injected");
 
 				Kernel32Wrapper.LoadLibrary(dllPath);
 
@@ -212,7 +204,7 @@ namespace Rynchodon.Injector
 
 				if (lpStartAddress == IntPtr.Zero)
 				{
-					WriteLine("Failed to get RunInSEProcess address");
+					Logger.WriteLine("Failed to get RunInSEProcess address");
 					return false;
 				}
 
@@ -222,7 +214,7 @@ namespace Rynchodon.Injector
 
 				if (hThread == IntPtr.Zero)
 				{
-					WriteLine("Failed to create run thread");
+					Logger.WriteLine("Failed to create run thread");
 					return false;
 				}
 
@@ -231,12 +223,12 @@ namespace Rynchodon.Injector
 					process.Refresh();
 					if (process.HasExited)
 					{
-						WriteLine("Game terminated before LoadARMS.dll could be loaded");
+						Logger.WriteLine("Game terminated before LoadARMS.dll could be loaded");
 						return false;
 					}
 				}
 
-				WriteLine("Loaded LoadARMS.dll");
+				Logger.WriteLine("Loaded LoadARMS.dll");
 			}
 			finally
 			{
