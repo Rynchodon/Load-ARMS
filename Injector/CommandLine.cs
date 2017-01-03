@@ -10,6 +10,8 @@ namespace Rynchodon.Injector
 	class CommandLine
 	{
 
+		private enum OptionName : byte { help, author, repo, basedir, publish, version }
+
 		private class Option
 		{
 			private readonly Type _type;
@@ -38,7 +40,10 @@ namespace Rynchodon.Injector
 							if (_type == null)
 							{
 								if (value.Length == 0)
+								{
+									Value = true;
 									return true;
+								}
 							}
 							else
 							{
@@ -62,32 +67,33 @@ namespace Rynchodon.Injector
 					return;
 				}
 				Parse(args);
-				//Thread.Sleep(10000);
+				Thread.Sleep(3000);
 			}
 			catch (Exception ex)
 			{
 				Console.Error.WriteLine(ex);
-				Thread.Sleep(60000);
+				Thread.Sleep(3000);
 				throw;
 			}
 		}
 
-		private static Dictionary<string, Option> GetOptions()
+		private static Dictionary<OptionName, Option> GetOptions()
 		{
-			Dictionary<string, Option> opts = new Dictionary<string, Option>();
+			Dictionary<OptionName, Option> opts = new Dictionary<OptionName, Option>();
 
-			opts.Add("help", new Option(new string[] { "-h", "--help" }, "print this help message and then exit"));
-			opts.Add("author", new Option(new string[] { "-a=", "--author=" }, "the author of the mod, required", typeof(string), false));
-			opts.Add("repo", new Option(new string[] { "-r=", "--repo=", "--repository=" }, "the repository of the mod, required", typeof(string), false));
-			opts.Add("basedir", new Option(new string[] { "--basedir=" }, "file paths relative to this directory determine where they will be copied to, defaults to current working directory", typeof(string)));
-			opts.Add("version", new Option(new string[] { "-v=", "--version=" }, "the version of the mod, by default the version is determined from the files", typeof(string)));
+			opts.Add(OptionName.help, new Option(new string[] { "-h", "--help" }, "print this help message and then exit"));
+			opts.Add(OptionName.author, new Option(new string[] { "-a=", "--author=" }, "the author of the mod, required", typeof(string), false));
+			opts.Add(OptionName.repo, new Option(new string[] { "-r=", "--repo=", "--repository=" }, "the repository of the mod, required", typeof(string), false));
+			opts.Add(OptionName.basedir, new Option(new string[] { "--basedir=" }, "file paths relative to this directory determine where they will be copied to, defaults to current working directory", typeof(string)));
+			opts.Add(OptionName.publish, new Option(new string[] { "-p", "--publish" }, "publish the mod to GitHub"));
+			opts.Add(OptionName.version, new Option(new string[] { "-v=", "--version=" }, "the version of the mod, by default the version is determined from the files", typeof(string)));
 
 			return opts;
 		}
 
 		private static void Parse(string[] args)
 		{
-			Dictionary<string, Option> opts = GetOptions();
+			Dictionary<OptionName, Option> opts = GetOptions();
 
 			List<string> filePaths = new List<string>();
 			for (int index = 0; index < args.Length; ++index)
@@ -96,10 +102,10 @@ namespace Rynchodon.Injector
 				if (a.StartsWith("\"") && a.EndsWith("\""))
 					a = a.Substring(1, a.Length - 2);
 
-				foreach (KeyValuePair<string, Option> pair in opts)
+				foreach (KeyValuePair<OptionName, Option> pair in opts)
 					if (pair.Value.Match(a))
 					{
-						if (pair.Key == "help")
+						if (pair.Key == OptionName.help)
 						{
 							PrintHelp(opts);
 							return;
@@ -118,7 +124,7 @@ namespace Rynchodon.Injector
 				NextArg:;
 			}
 
-			foreach (KeyValuePair<string, Option> pair in opts)
+			foreach (KeyValuePair<OptionName, Option> pair in opts)
 				if (!pair.Value.Optional && pair.Value.Value == null)
 				{
 					PrintHelp(opts);
@@ -134,7 +140,7 @@ namespace Rynchodon.Injector
 			LocallyCompiled(opts, filePaths);
 		}
 
-		private static void PrintHelp(Dictionary<string, Option> options)
+		private static void PrintHelp(Dictionary<OptionName, Option> options)
 		{
 			int longestAlias = 0;
 			int longestType = 0;
@@ -176,7 +182,7 @@ namespace Rynchodon.Injector
 			Console.Write(builder.ToString());
 		}
 
-		private static void LocallyCompiled(Dictionary<string, Option> opts, List<string> filePaths)
+		private static void LocallyCompiled(Dictionary<OptionName, Option> opts, List<string> filePaths)
 		{
 			Logger.WriteLine("Adding locally compiled mod");
 
@@ -184,10 +190,10 @@ namespace Rynchodon.Injector
 			string dllPath = myDirectory + "\\LoadARMS.dll";
 
 			Assembly.LoadFile(dllPath).GetType("Rynchodon.Loader.LoadArms").GetMethod("AddLocallyCompiled", BindingFlags.Static | BindingFlags.Public).Invoke(null,
-				new object[] { opts["author"].Value, opts["repo"].Value, opts["version"].Value, filePaths, opts["basedir"].Value });
+				new object[] { opts[OptionName.author].Value, opts[OptionName.repo].Value, opts[OptionName.version].Value, filePaths, opts[OptionName.basedir].Value, opts[OptionName.publish].Value });
 
 			// exception for some reason
-			//Loader.LoadArms.AddLocallyCompiled((string)opts["author"].Value, (string)opts["repo"].Value, (string)opts["version"].Value, filePaths, (string)opts["startdir"].Value);
+			//Loader.LoadArms.AddLocallyCompiled((string)opts[OptionName.author].Value, (string)opts[OptionName.repo].Value, (string)opts[OptionName.version].Value, filePaths, (string)opts[OptionName.basedir].Value);
 		}
 
 	}

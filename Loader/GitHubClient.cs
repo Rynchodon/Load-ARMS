@@ -19,10 +19,10 @@ namespace Rynchodon.Loader
 		private bool _releaseDownloadFailed;
 		private Release[] _releases;
 
-		public GitHubClient(ModInfo mod, string oAuthToken = null, string userAgent = "Rynchodon-LoadARMS")
+		public GitHubClient(ModInfo mod, string oAuthToken = null, string userAgent = "Rynchodon.LoadARMS")
 		{
 			this._mod = mod;
-			this._oAuthToken = oAuthToken;
+			this._oAuthToken = oAuthToken ?? Environment.GetEnvironmentVariable("oAuthToken");
 			this._userAgent = userAgent;
 
 			_releaseDownload = new Task<Release[]>(DownloadReleases);
