@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 namespace Rynchodon.Injector
 {
@@ -71,21 +72,22 @@ namespace Rynchodon.Injector
 
 		static void Main(string[] args)
 		{
-			//try
-			//{
+			try
+			{
 				if (args == null || args.Length == 0)
 				{
 					DllInjector.Run();
 					return;
 				}
 				Parse(args);
-			//}
-			//catch (Exception ex)
-			//{
-			//	Console.Error.WriteLine(ex);
-			//	Thread.Sleep(60000);
-			//	throw;
-			//}
+				Thread.Sleep(1000);
+			}
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine(ex);
+				Thread.Sleep(60000);
+				throw;
+			}
 		}
 
 		private static SortedDictionary<OptionName, Option> GetOptions()

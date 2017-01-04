@@ -73,6 +73,12 @@ namespace Rynchodon.Loader
 			diff = this.Revision - other.Revision;
 			if (diff != 0)
 				return diff;
+			diff = this.StableBuild.CompareTo(other.StableBuild);
+			if (diff != 0)
+				return diff;
+			diff = this.UnstableBuild.CompareTo(other.UnstableBuild);
+			if (diff != 0)
+				return diff;
 
 			return 0;
 		}

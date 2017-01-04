@@ -78,7 +78,10 @@ namespace Rynchodon.Loader
 					File.Delete(input.ZipFileName);
 				File.Move(zipTempFile, input.ZipFileName);
 
-				client.PublishRelease(input.Release, input.ZipFileName);
+				if (client.PublishRelease(input.Release, input.ZipFileName))
+					Console.WriteLine("Release published");
+				else
+					Console.WriteLine("Publish failed, see log for details");
 			}
 			finally
 			{
