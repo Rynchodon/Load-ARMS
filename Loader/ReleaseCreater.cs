@@ -15,30 +15,35 @@ namespace Rynchodon.Loader
 	static class ReleaseCreater
 	{
 
+		[DataContract]
+		private class Input
+		{
+			[DataMember]
+			public string ZipFileName = null;
+			[DataMember]
+			public CreateRelease Release = new CreateRelease();
+		}
+
 		public static void Publish(ModVersion modVersion, string directory, string oAuthToken)
 		{
 			GitHubClient client = new GitHubClient(modVersion, oAuthToken);
 			if (!client.HasOAuthToken)
 				throw new ArgumentException("Need oAuthToken");
 
-			CreateRelease create = new CreateRelease();
-			create.version = modVersion.version;
-			create.draft = true;
-			create.body = "body";
-			create.name = "name";
-			create.target_commitish = "master";
+			Input input = new Input();
+			input.Release.version = modVersion.version;
+			input.Release.draft = true;
 
 			string zipTempFile = PathExtensions.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".zip");
 			Task compress = new Task(() => CompressFiles(zipTempFile, directory, modVersion.filePaths));
 			compress.Start();
-			string zipFileName = null;
 
 			string releaseFile = PathExtensions.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".txt");
 			try
 			{
-				DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(CreateRelease));
+				DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Input));
 				using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(releaseFile, FileMode.CreateNew), Encoding.UTF8, true, true))
-					serializer.WriteObject(writer, create);
+					serializer.WriteObject(writer, input);
 
 				while (true)
 				{
@@ -49,7 +54,7 @@ namespace Rynchodon.Loader
 					using (XmlDictionaryReader reader = JsonReaderWriterFactory.CreateJsonReader(file, new XmlDictionaryReaderQuotas()))
 						try
 						{
-							create = (CreateRelease)serializer.ReadObject(reader);
+							input = (Input)serializer.ReadObject(reader);
 							break;
 						}
 						catch (SerializationException ex)
@@ -63,14 +68,17 @@ namespace Rynchodon.Loader
 				Console.WriteLine("Release created");
 				compress.Wait();
 
-				zipFileName = PathExtensions.Combine(Path.GetTempPath(), create.tag_name + ".zip");
-				if (File.Exists(zipFileName))
-					File.Delete(zipFileName);
-				File.Move(zipTempFile, zipFileName);
+				if (input.ZipFileName == null)
+					input.ZipFileName = modVersion.fullName + ".zip";
+				else if (!input.ZipFileName.EndsWith(".zip"))
+					input.ZipFileName = input.ZipFileName + ".zip";
 
-				client.PublishRelease(create, zipFileName);
+				input.ZipFileName = PathExtensions.Combine(Path.GetTempPath(), input.ZipFileName);
+				if (File.Exists(input.ZipFileName))
+					File.Delete(input.ZipFileName);
+				File.Move(zipTempFile, input.ZipFileName);
 
-				Logger.WriteLine("client finished");
+				client.PublishRelease(input.Release, input.ZipFileName);
 			}
 			finally
 			{
@@ -79,8 +87,8 @@ namespace Rynchodon.Loader
 					File.Delete(releaseFile);
 				if (File.Exists(zipTempFile))
 					File.Delete(zipTempFile);
-				//if (File.Exists(zipFileName))
-				//	File.Delete(zipFileName);
+				if (File.Exists(input.ZipFileName))
+					File.Delete(input.ZipFileName);
 			}
 		}
 

@@ -4,6 +4,9 @@ using System.Runtime.Serialization;
 
 namespace Rynchodon.Loader
 {
+	/// <summary>
+	/// Basic data about a mod.
+	/// </summary>
 	[DataContract]
 	public class ModName : IEquatable<ModName>
 	{
@@ -15,6 +18,9 @@ namespace Rynchodon.Loader
 
 		[IgnoreDataMember]
 		public string releases_site { get { return @"https://api.github.com/repos/" + author + "/" + repository + "/releases"; } }
+
+		[IgnoreDataMember]
+		public string uploads_site { get { return @"https://uploads.github.com/repos/" + author + "/" + repository + "/releases"; } }
 
 		public ModName() { }
 
@@ -75,6 +81,9 @@ namespace Rynchodon.Loader
 			this.repository = name.repository;
 		}
 
+		/// <summary>
+		/// Erase all files associated with this version.
+		/// </summary>
 		public void EraseAllFiles()
 		{
 			if (filePaths == null)

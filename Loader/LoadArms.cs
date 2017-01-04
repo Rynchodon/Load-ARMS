@@ -438,6 +438,7 @@ namespace Rynchodon.Loader
 				current = new ModVersion(name);
 				_data.ModsCurrentVersions.Add(hashCode, current);
 			}
+			current.version = version;
 			Logger.WriteLine("mod: " + name.fullName + ", compiled version: " + current.version);
 			current.EraseAllFiles();
 

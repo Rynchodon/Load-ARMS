@@ -22,6 +22,7 @@ namespace Rynchodon.Loader
 		private bool _releaseDownloadFailed;
 		private Release[] _releases;
 
+		/// <summary>True if oAuthToken was provided or retrieved from environment variable, false otherwise.</summary>
 		public bool HasOAuthToken { get { return _oAuthToken != null; } }
 
 		/// <summary>
@@ -70,22 +71,15 @@ namespace Rynchodon.Loader
 					return false;
 				}
 
-			Logger.WriteLine("OK");
-
 			// release needs to be draft while it is being created, in case of failure
 			bool draft = create.draft;
 			create.draft = true;
-
-			Logger.WriteLine("Setup");
 
 			HttpWebRequest request = WebRequest.CreateHttp(_mod.releases_site);
 			request.UserAgent = _userAgent;
 			request.Method = "POST";
 			request.Headers.Add("Authorization", "token " + _oAuthToken);
 
-			DataContractJsonSerializer temp = new DataContractJsonSerializer(typeof(CreateRelease));
-			temp.WriteObject(Console.OpenStandardOutput(), create);
-			
 			using (Stream requestStream = request.GetRequestStream())
 				create.WriteCreateJson(requestStream);
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Release));
@@ -96,35 +90,36 @@ namespace Rynchodon.Loader
 
 			Logger.WriteLine("Release id: " + release.id);
 
-			foreach (string asset in assetsPaths)
+			try
 			{
-				string fileName = Path.GetFileName(asset);
-				request = WebRequest.CreateHttp(_mod.releases_site + release.id + "/assets?name=" + fileName);
-				request.UserAgent = _userAgent;
-				request.Method = "POST";
-				request.ContentType = "application/" + Path.GetExtension(fileName).Substring(1);
-				request.Headers.Add("Authorization", "token " + _oAuthToken);
+				foreach (string asset in assetsPaths)
+				{
+					string fileName = Path.GetFileName(asset);
+					request = WebRequest.CreateHttp(_mod.uploads_site + '/' + release.id + "/assets?name=" + fileName);
+					request.UserAgent = _userAgent;
+					request.Method = "POST";
+					request.ContentType = "application/" + Path.GetExtension(fileName).Substring(1);
+					request.Headers.Add("Authorization", "token " + _oAuthToken);
 
-				Stream upStream = request.GetRequestStream();
-				FileStream fileRead = new FileStream(asset, FileMode.Open);
+					using (Stream upStream = request.GetRequestStream())
+					using (FileStream fileRead = new FileStream(asset, FileMode.Open))
+						fileRead.CopyTo(upStream);
 
-				fileRead.CopyTo(upStream);
-				Logger.WriteLine("Posting: " + fileName);
-				request.GetResponse().Dispose();
-
-				Logger.WriteLine("done response");
-				
-				fileRead.Dispose();
-				upStream.Dispose();
+					Logger.WriteLine("Posting: " + fileName);
+					request.GetResponse().Dispose();
+				}
 			}
-
-			Logger.WriteLine("done assets");
+			catch (WebException ex)
+			{
+				Logger.WriteLine("Failed to post asset(s)\n" + ex);
+				DeleteRelease(release);
+				throw ex;
+			}
 
 			if (!draft)
 			{
-				create.draft = draft;
-				Release result;
-				EditRelease(create, out result);
+				release.draft = draft;
+				EditRelease(ref release);
 			}
 
 			_releases = null; // needs to be updated
@@ -137,13 +132,12 @@ namespace Rynchodon.Loader
 		/// Edit information about a release.
 		/// </summary>
 		/// <param name="edit">The new information for the release.</param>
-		/// <param name="release">Updated information from GitHub</param>
-		public void EditRelease(CreateRelease edit, out Release release)
+		public void EditRelease(ref Release edit)
 		{
 			if (_oAuthToken == null)
 				throw new NullReferenceException("Cannot edit if authentication token is null");
 
-			HttpWebRequest request = WebRequest.CreateHttp(_mod.releases_site);
+			HttpWebRequest request = WebRequest.CreateHttp(_mod.releases_site + '/' + edit.id);
 			request.UserAgent = _userAgent;
 			request.Method = "PATCH";
 			request.Headers.Add("Authorization", "token " + _oAuthToken);
@@ -153,13 +147,37 @@ namespace Rynchodon.Loader
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Release));
 			using (WebResponse response = request.GetResponse())
 			using (Stream responseStream = response.GetResponseStream())
-				release = (Release)serializer.ReadObject(responseStream);
+				edit = (Release)serializer.ReadObject(responseStream);
+
+			Logger.WriteLine("Release edited: " + edit.tag_name);
 
 			_releases = null; // needs to be updated
 		}
 
 		/// <summary>
-		/// Get all the releases, the value is cached and only updated after PublishRelease or EditRelease.
+		/// Delete a release from GitHub
+		/// </summary>
+		/// <param name="delete">The release to delete</param>
+		public void DeleteRelease(Release delete)
+		{
+			if (_oAuthToken == null)
+				throw new NullReferenceException("Cannot delete if authentication token is null");
+
+			HttpWebRequest request = WebRequest.CreateHttp(_mod.releases_site + '/' + delete.id);
+			request.UserAgent = _userAgent;
+			request.Method = "DELETE";
+			request.Headers.Add("Authorization", "token " + _oAuthToken);
+
+			using (Stream requestStream = request.GetRequestStream())
+				request.GetResponse().Dispose();
+
+			Logger.WriteLine("Release deleted: " + delete.tag_name);
+
+			_releases = null; // needs to be updated
+		}
+
+		/// <summary>
+		/// Get all the releases, the value is cached and only updated after PublishRelease, EditRelease, or DeleteRelease.
 		/// The array should not be modified.
 		/// </summary>
 		/// <returns>An array representing all the GitHub releases for this mod.</returns>
@@ -285,28 +303,26 @@ namespace Rynchodon.Loader
 
 				if (asset.name.EndsWith(".zip"))
 				{
-					FileStream zipFile = new FileStream(assetDestination, FileMode.Create);
-					responseStream.CopyTo(zipFile);
-					zipFile.Dispose();
+					using (FileStream zipFile = new FileStream(assetDestination, FileMode.Create))
+						responseStream.CopyTo(zipFile);
 
 					Logger.WriteLine("Unpacking: " + asset.name);
-					ZipArchive archive = ZipFile.OpenRead(assetDestination);
-					foreach (ZipArchiveEntry entry in archive.Entries)
-					{
-						string entryDestination = destinationDirectory + entry.FullName;
+					using (ZipArchive archive = ZipFile.OpenRead(assetDestination))
+						foreach (ZipArchiveEntry entry in archive.Entries)
+						{
+							string entryDestination = destinationDirectory + entry.FullName;
 							Directory.CreateDirectory(Path.GetDirectoryName(entryDestination));
 
-						if (File.Exists(entryDestination))
-						{
-							Logger.WriteLine("ERROR: File exists: " + entryDestination);
-							return false;
+							if (File.Exists(entryDestination))
+							{
+								Logger.WriteLine("ERROR: File exists: " + entryDestination);
+								return false;
+							}
+
+							filePaths.Add(entryDestination);
+							entry.ExtractToFile(entryDestination);
 						}
 
-						filePaths.Add(entryDestination);
-						entry.ExtractToFile(entryDestination);
-					}
-
-					archive.Dispose();
 					File.Delete(assetDestination);
 				}
 				else
@@ -318,9 +334,8 @@ namespace Rynchodon.Loader
 					}
 
 					filePaths.Add(assetDestination);
-					FileStream file = new FileStream(assetDestination, FileMode.CreateNew);
-					responseStream.CopyTo(file);
-					file.Dispose();
+					using (FileStream file = new FileStream(assetDestination, FileMode.CreateNew))
+						responseStream.CopyTo(file);
 				}
 
 				responseStream.Dispose();

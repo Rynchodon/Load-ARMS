@@ -77,7 +77,10 @@ namespace Rynchodon.Injector
 		{
 			foreach (string remove in new string[] { "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log" })
 				if (File.Exists(remove))
+				{
+					Logger.WriteLine("Delete file: " + remove);
 					File.Delete(remove);
+				}
 		}
 
 		private static Process GetGameProcess(bool isDedicatedServer)

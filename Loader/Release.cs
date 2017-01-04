@@ -1,6 +1,9 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
+using System.Text;
 
 namespace Rynchodon.Loader
 {
@@ -59,24 +62,61 @@ namespace Rynchodon.Loader
 
 		public CreateRelease() { }
 
-		private CreateRelease(CreateRelease copy)
-		{
-			this.tag_name = copy.tag_name;
-			this.target_commitish = copy.target_commitish;
-			this.name = copy.name;
-			this.body = copy.body;
-			this.draft = copy.draft;
-			this.prerelease = copy.prerelease;
-		}
-		
 		/// <summary>
-		/// Write this object to a stream as CreateRelease & json.
+		/// Special JSON writer for CreateRelease because GitHub won't take null for an answer.
 		/// </summary>
-		/// <param name="writeTo">The stream to write to.</param>
-		public void WriteCreateJson(Stream writeTo)
+		/// <param name="targetStream">The stream to write to.</param>
+		public void WriteCreateJson(Stream targetStream)
 		{
-			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(CreateRelease));
-			serializer.WriteObject(writeTo, new CreateRelease(this));
+			StringBuilder builder = new StringBuilder();
+			List<string> fieldStrings = new List<string>();
+			foreach (FieldInfo field in typeof(CreateRelease).GetFields(BindingFlags.Instance | BindingFlags.Public))
+			{
+				if (!field.HasAttribute<DataMemberAttribute>())
+					continue;
+
+				object fieldValue = field.GetValue(this);
+				if (fieldValue == null)
+					continue;
+
+				WriteCreateJson(builder, fieldStrings, field, field.FieldType, fieldValue);
+			}
+			foreach (PropertyInfo property in typeof(CreateRelease).GetProperties(BindingFlags.Instance | BindingFlags.Public))
+			{
+				if (!property.HasAttribute<DataMemberAttribute>())
+					continue;
+
+				object propertyValue = property.GetValue(this);
+				if (propertyValue == null)
+					continue;
+
+				WriteCreateJson(builder, fieldStrings, property, property.PropertyType, propertyValue);
+			}
+
+			using (StreamWriter writer = new StreamWriter(targetStream))
+			{
+				writer.Write('{');
+				writer.Write(string.Join(",", fieldStrings));
+				writer.Write('}');
+			}
+		}
+
+		private static void WriteCreateJson(StringBuilder builder, List<string> fieldStrings, MemberInfo member, Type memberType, object fieldValue)
+		{
+			builder.Clear();
+			builder.Append('"');
+			builder.Append(member.Name);
+			builder.Append("\":");
+			if (memberType == typeof(string))
+			{
+				builder.Append('"');
+				builder.Append((string)fieldValue);
+				builder.Append('"');
+			}
+			else
+				builder.Append(fieldValue.ToString().ToLower());
+
+			fieldStrings.Add(builder.ToString());
 		}
 	}
 
