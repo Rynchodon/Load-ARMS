@@ -9,17 +9,28 @@ using VRage.Game;
 
 namespace Rynchodon.Loader
 {
+	/// <summary>
+	/// Connects to GitHub and sends and receives release information.
+	/// </summary>
 	public class GitHubClient
 	{
 
-		private readonly ModInfo _mod;
+		private readonly ModName _mod;
 		private readonly string _oAuthToken, _userAgent;
 
 		private Task<Release[]> _releaseDownload;
 		private bool _releaseDownloadFailed;
 		private Release[] _releases;
 
-		public GitHubClient(ModInfo mod, string oAuthToken = null, string userAgent = "Rynchodon.LoadARMS")
+		public bool HasOAuthToken { get { return _oAuthToken != null; } }
+
+		/// <summary>
+		/// Create a GitHubClient and start downloading release information.
+		/// </summary>
+		/// <param name="mod">Name of the mod</param>
+		/// <param name="oAuthToken">Authentication token for GitHub, not required for updating.</param>
+		/// <param name="userAgent">Name of the application</param>
+		public GitHubClient(ModName mod, string oAuthToken = null, string userAgent = "Rynchodon:Load-ARMS")
 		{
 			this._mod = mod;
 			this._oAuthToken = oAuthToken ?? Environment.GetEnvironmentVariable("oAuthToken");
@@ -32,14 +43,14 @@ namespace Rynchodon.Loader
 		/// <summary>
 		/// Publish a new release.
 		/// </summary>
-		/// <param name="create">Release information, tag_name will be overwritten.</param>
+		/// <param name="create">Release information.</param>
 		/// <param name="assetsPaths">Assets to be included, do not include folders. It is recommended that you compress the files and pass the zip file path to this method.</param>
 		public bool PublishRelease(CreateRelease create, params string[] assetsPaths)
 		{
 			if (_oAuthToken == null)
 				throw new NullReferenceException("Cannot publish if authentication token is null");
 
-			if (assetsPaths == null || assetsPaths.Length != 0)
+			if (assetsPaths == null || assetsPaths.Length == 0)
 				throw new ArgumentException("No Assets, cannot publish");
 			foreach (string path in assetsPaths)
 				if (!File.Exists(path))
@@ -59,16 +70,22 @@ namespace Rynchodon.Loader
 					return false;
 				}
 
+			Logger.WriteLine("OK");
+
 			// release needs to be draft while it is being created, in case of failure
-			create.tag_name = create.version.ToString();
 			bool draft = create.draft;
 			create.draft = true;
+
+			Logger.WriteLine("Setup");
 
 			HttpWebRequest request = WebRequest.CreateHttp(_mod.releases_site);
 			request.UserAgent = _userAgent;
 			request.Method = "POST";
 			request.Headers.Add("Authorization", "token " + _oAuthToken);
 
+			DataContractJsonSerializer temp = new DataContractJsonSerializer(typeof(CreateRelease));
+			temp.WriteObject(Console.OpenStandardOutput(), create);
+			
 			using (Stream requestStream = request.GetRequestStream())
 				create.WriteCreateJson(requestStream);
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Release));
@@ -85,7 +102,7 @@ namespace Rynchodon.Loader
 				request = WebRequest.CreateHttp(_mod.releases_site + release.id + "/assets?name=" + fileName);
 				request.UserAgent = _userAgent;
 				request.Method = "POST";
-				request.ContentType = "application/" + Path.GetExtension(fileName);
+				request.ContentType = "application/" + Path.GetExtension(fileName).Substring(1);
 				request.Headers.Add("Authorization", "token " + _oAuthToken);
 
 				Stream upStream = request.GetRequestStream();
@@ -95,9 +112,13 @@ namespace Rynchodon.Loader
 				Logger.WriteLine("Posting: " + fileName);
 				request.GetResponse().Dispose();
 
+				Logger.WriteLine("done response");
+				
 				fileRead.Dispose();
 				upStream.Dispose();
 			}
+
+			Logger.WriteLine("done assets");
 
 			if (!draft)
 			{
@@ -108,10 +129,15 @@ namespace Rynchodon.Loader
 
 			_releases = null; // needs to be updated
 
-			Logger.WriteLine("Release successful");
+			Logger.WriteLine("Release published");
 			return true;
 		}
 
+		/// <summary>
+		/// Edit information about a release.
+		/// </summary>
+		/// <param name="edit">The new information for the release.</param>
+		/// <param name="release">Updated information from GitHub</param>
 		public void EditRelease(CreateRelease edit, out Release release)
 		{
 			if (_oAuthToken == null)
@@ -132,6 +158,11 @@ namespace Rynchodon.Loader
 			_releases = null; // needs to be updated
 		}
 
+		/// <summary>
+		/// Get all the releases, the value is cached and only updated after PublishRelease or EditRelease.
+		/// The array should not be modified.
+		/// </summary>
+		/// <returns>An array representing all the GitHub releases for this mod.</returns>
 		public Release[] GetReleases()
 		{
 			if (_releases == null)
@@ -159,6 +190,10 @@ namespace Rynchodon.Loader
 			return _releases;
 		}
 
+		/// <summary>
+		/// Download all releases for this mod from GitHub.
+		/// </summary>
+		/// <returns>All the releases for this mod.</returns>
 		private Release[] DownloadReleases()
 		{
 			HttpWebRequest request = WebRequest.CreateHttp(_mod.releases_site);
@@ -174,7 +209,14 @@ namespace Rynchodon.Loader
 			}
 		}
 
-		public bool Update(ModInfo info, ModVersion current, string destinationDirectory)
+		/// <summary>
+		/// Download an update for a mod.
+		/// </summary>
+		/// <param name="info">Information about the mod.</param>
+		/// <param name="current">The current version, to determine if the mod needs to be updated</param>
+		/// <param name="destinationDirectory">Path to Load-ARMS folder, \mods\info.fullName will be appended.</param>
+		/// <returns>True iff the mod was updated.</returns>
+		internal bool Update(ModInfo info, ModVersion current, string destinationDirectory)
 		{
 			Release[] releases = GetReleases();
 			if (releases == null)
@@ -234,6 +276,7 @@ namespace Rynchodon.Loader
 			{
 				Logger.WriteLine("Downloading asset: " + asset.name);
 				HttpWebRequest request = WebRequest.CreateHttp(asset.browser_download_url);
+				request.Accept = "application/octet-stream";
 				request.UserAgent = _userAgent;
 
 				WebResponse response = request.GetResponse();

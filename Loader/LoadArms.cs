@@ -15,6 +15,9 @@ using VRage.Plugins;
 
 namespace Rynchodon.Loader
 {
+	/// <summary>
+	/// Main entry point.
+	/// </summary>
 	public class LoadArms : IPlugin
 	{
 
@@ -67,6 +70,9 @@ namespace Rynchodon.Loader
 
 		#region Injected Init
 
+		/// <summary>
+		/// Starting point when injected into SE.
+		/// </summary>
 		[DllExport]
 		public static void RunInSEProcess()
 		{
@@ -74,6 +80,8 @@ namespace Rynchodon.Loader
 			{
 				if (MySandboxGame.Static != null)
 				{
+					if (_instance != null)
+						return;
 					LoadArms instance = new LoadArms();
 					MySandboxGame.Static.Invoke(() => instance.Init(MySandboxGame.Static));
 					return;
@@ -86,12 +94,34 @@ namespace Rynchodon.Loader
 
 		#endregion
 
-		public static void AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string basedir = null, bool publish = false)
+		/// <summary>
+		/// Starting point when run from command line.
+		/// </summary>
+		public static void FromCommandLine(string author, string repo, string basedir, string oAuthToken, bool publish, string versionString, IEnumerable<string> files)
 		{
 			if (_instance == null)
 				new LoadArms(false);
-			_instance.in_AddLocallyCompiled(author, repo, version, files, basedir);
-			_instance.Robocopy();
+
+			ModName name = new ModName(author, repo);
+
+			Version version;
+			if (versionString != null)
+				version = new Version(versionString);
+			else
+			{
+				version = new Version();
+				foreach (string file in files)
+				{
+					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file));
+					if (version.CompareTo(fileVersion) < 0)
+						version = fileVersion;
+				}
+			}
+
+			ModVersion modVersion = _instance.AddLocallyCompiled(name, version, files, basedir);
+
+			if (publish)
+				ReleaseCreater.Publish(modVersion, PathExtensions.Combine(_instance._directory, "mods", name.fullName), oAuthToken);
 		}
 
 		[DataContract]
@@ -115,8 +145,15 @@ namespace Rynchodon.Loader
 		private DownloadProgress.Stats _downProgress = new DownloadProgress.Stats();
 		private bool _startedRobocopy, _loadedPlugins;
 
+		/// <summary>
+		/// Creates an instance of LoadArms and starts the updating process.
+		/// </summary>
 		public LoadArms() : this(true) { }
 
+		/// <summary>
+		/// Creates an instance of LoadArms and, optionally, starts the updating process.
+		/// </summary>
+		/// <param name="start">Iff true, start the updating process.</param>
 		private LoadArms(bool start)
 		{
 			if (_instance != null)
@@ -144,11 +181,17 @@ namespace Rynchodon.Loader
 			SaveData();
 		}
 
-		public void Dispose()
+		/// <summary>
+		/// Update LoadARMS.dll and LoadARMS.exe from download folder.
+		/// </summary>
+		void IDisposable.Dispose()
 		{
 			Robocopy();
 		}
 
+		/// <summary>
+		/// Update LoadARMS.dll and LoadARMS.exe from download folder using robocopy.
+		/// </summary>
 		private void Robocopy()
 		{
 			if (_instance != this || _startedRobocopy)
@@ -158,7 +201,7 @@ namespace Rynchodon.Loader
 			Logger.WriteLine("starting robocopy");
 
 			string first = '"' + _directory + "mods\\Rynchodon.Load-ARMS\" \"" + _directory + "..\\";
-			string second = "\" /copyall /njs /W:1 /xx";
+			string second = "\" LoadARMS.dll LoadARMS.exe /copyall /W:1 /xx";
 
 			string toBin64 = first + "Bin64" + second;
 			string toDed64 = first + "DedicatedServer64" + second;
@@ -170,6 +213,10 @@ namespace Rynchodon.Loader
 			robocopy.Start();
 		}
 
+		/// <summary>
+		/// Initialize this object.
+		/// </summary>
+		/// <param name="gameInstance">MySandboxGame.Static, so I don't know why it's a param</param>
 		public void Init(object gameInstance)
 		{
 			if (_instance != this)
@@ -179,7 +226,10 @@ namespace Rynchodon.Loader
 				MyGuiSandbox.AddScreen(new DownloadProgress(_task, _downProgress));
 		}
 
-		public void Update()
+		/// <summary>
+		/// Load plugins, if updating has finished.
+		/// </summary>
+		void IPlugin.Update()
 		{
 			if (_instance != this)
 				return;
@@ -190,6 +240,8 @@ namespace Rynchodon.Loader
 				_loadedPlugins = true;
 				foreach (IPlugin plugin in LoadPlugins())
 					plugin.Init(MySandboxGame.Static);
+
+				// TODO: more cleanup
 				_downProgress = null;
 			}
 		}
@@ -296,42 +348,11 @@ namespace Rynchodon.Loader
 
 		private List<IPlugin> LoadPlugins()
 		{
+			HashSet<ModVersion> loadedMods = new HashSet<ModVersion>();
 			List<IPlugin> chainedPlugins = new List<IPlugin>();
-			Type pluginType = typeof(IPlugin);
 
 			foreach (ModVersion mod in _data.ModsCurrentVersions.Values)
-			{
-				if (mod.author == authRyn && mod.repository == repoLoad)
-					continue;
-
-				if (mod.filePaths != null)
-					foreach (string filePath in mod.filePaths)
-					{
-						if (!File.Exists(filePath))
-						{
-							Logger.WriteLine("ERROR: File is missing: " + filePath);
-							mod.version.Major = -1;
-							continue;
-						}
-						string ext = Path.GetExtension(filePath);
-						if (ext == ".dll")
-						{
-							Logger.WriteLine("Loading plugins from " + filePath);
-
-							Assembly assembly = Assembly.LoadFrom(filePath);
-							if (assembly == null)
-								Logger.WriteLine("ERROR: Could not load assembly: " + filePath);
-							else
-								foreach (Type t in assembly.ExportedTypes)
-									if (pluginType.IsAssignableFrom(t))
-									{
-										Logger.WriteLine("Plugin: " + t.FullName);
-										try { chainedPlugins.Add((IPlugin)Activator.CreateInstance(t)); }
-										catch (Exception ex) { Logger.WriteLine("ERROR: Could not create instance of type \"" + t.FullName + "\": " + ex); }
-									}
-						}
-					}
-			}
+				LoadPlugins(chainedPlugins, mod, loadedMods);
 
 			Logger.WriteLine("Adding plugins to MyPlugins");
 
@@ -344,11 +365,72 @@ namespace Rynchodon.Loader
 			return chainedPlugins;
 		}
 
-		private void in_AddLocallyCompiled(string author, string repo, string version, IEnumerable<string> files, string startdir = null)
+		private bool LoadPlugins(List<IPlugin> chainedPlugins, ModVersion mod, HashSet<ModVersion> loadedMods, int depth = 0)
+		{
+			if (loadedMods.Contains(mod))
+				return true;
+			if (depth > 100)
+			{
+				Logger.WriteLine("ERROR Failed to load " + mod.fullName + ", recursive requirements");
+				return false;
+			}
+
+			if (mod.requirements != null)
+				foreach (ModName name in mod.requirements)
+				{
+					ModVersion required;
+					if (!_data.ModsCurrentVersions.TryGetValue(name.GetHashCode(), out required))
+					{
+						Logger.WriteLine("ERROR: Failed to load " + mod.fullName + ", missing required mod: " + name.fullName);
+						return false;
+					}
+					if (!LoadPlugins(chainedPlugins, required, loadedMods, depth + 1))
+					{
+						Logger.WriteLine("ERROR: Failed to load " + mod.fullName + ", failed to load required mod: " + name.fullName);
+						return false;
+					}
+				}
+
+			if (!loadedMods.Add(mod))
+				throw new Exception(mod.fullName + " already loaded");
+
+			Type pluginType = typeof(IPlugin);
+
+			if (mod.filePaths != null)
+				foreach (string filePath in mod.filePaths)
+				{
+					if (!File.Exists(filePath))
+					{
+						Logger.WriteLine("ERROR: File is missing: " + filePath);
+						mod.version.Major = -1;
+						continue;
+					}
+					string ext = Path.GetExtension(filePath);
+					if (ext == ".dll")
+					{
+						Logger.WriteLine("Loading plugins from " + filePath);
+
+						Assembly assembly = Assembly.LoadFrom(filePath);
+						if (assembly == null)
+							Logger.WriteLine("ERROR: Could not load assembly: " + filePath);
+						else
+							foreach (Type t in assembly.ExportedTypes)
+								if (pluginType.IsAssignableFrom(t))
+								{
+									Logger.WriteLine("Plugin: " + t.FullName);
+									try { chainedPlugins.Add((IPlugin)Activator.CreateInstance(t)); }
+									catch (Exception ex) { Logger.WriteLine("ERROR: Could not create instance of type \"" + t.FullName + "\": " + ex); }
+								}
+					}
+				}
+
+			return true;
+		}
+
+		private ModVersion AddLocallyCompiled(ModName name, Version version, IEnumerable<string> files, string baseDir)
 		{
 			LoadData();
 
-			ModName name = new ModName(author, repo);
 			int hashCode = name.GetHashCode();
 			ModVersion current;
 			if (!_data.ModsCurrentVersions.TryGetValue(hashCode, out current))
@@ -356,42 +438,48 @@ namespace Rynchodon.Loader
 				current = new ModVersion(name);
 				_data.ModsCurrentVersions.Add(hashCode, current);
 			}
-			if (version != null)
-				current.version = new Version(version);
-			else
-			{
-				Version highest = new Version();
-				foreach (string file in files)
-				{
-					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file));
-					if (highest.CompareTo(fileVersion) < 0)
-						highest = fileVersion;
-				}
-				current.version = highest;
-			}
 			Logger.WriteLine("mod: " + name.fullName + ", compiled version: " + current.version);
 			current.EraseAllFiles();
 
-			if (startdir == null)
-				startdir = Environment.CurrentDirectory + '\\';
+			string downloadDirectory = PathExtensions.Combine(_directory, "mods", name.fullName);
+			string root = Path.GetPathRoot(baseDir);
 
-			List<string> copied = new List<string>();
-			foreach (string f in files)
+			List <string> copied = new List<string>();
+			foreach (string fileSource in files)
 			{
-				string target = _directory + "mods\\" + name.fullName + '\\';
-				if (f.StartsWith(startdir))
-					target += f.Substring(startdir.Length);
-				else
-					target += f;
-				Logger.WriteLine("Copy: " + f + " to " + target);
-				File.Copy(f, target);
-				copied.Add(target);
+				// do not allow files to be deployed outside of download folder and avoid an overly complicated structure
+
+				string fullPathSource = Path.GetFullPath(fileSource);
+				string fileDestination = null;
+
+				string path = baseDir;
+				while (path != root)
+				{
+					if (fullPathSource.StartsWith(path))
+					{
+						fileDestination = PathExtensions.Combine(downloadDirectory, fullPathSource.Substring(path.Length));
+						break;
+					}
+					path = Path.GetDirectoryName(path);
+				}
+
+				if (fileDestination == null)
+					throw new ArgumentException("Cannot construct relative path from " + fullPathSource + " using " + baseDir);
+
+				Logger.WriteLine("Copy: " + fileSource + " to " + fileDestination);
+				File.Copy(fullPathSource, fileDestination);
+				copied.Add(fileDestination);
 			}
 
 			current.filePaths = copied.ToArray();
 			current.locallyCompiled = true;
 
 			SaveData();
+
+			if (name.author == authRyn && name.repository == repoLoad)
+				Robocopy();
+
+			return current;
 		}
 
 		private void Cleanup()

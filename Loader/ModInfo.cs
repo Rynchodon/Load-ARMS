@@ -33,6 +33,11 @@ namespace Rynchodon.Loader
 		{
 			return fullName.GetHashCode();
 		}
+
+		public override string ToString()
+		{
+			return fullName;
+		}
 	}
 
 	/// <summary>

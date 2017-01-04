@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Rynchodon.Injector
 {
-	public static class Kernel32Wrapper
+	static class Kernel32Wrapper
 	{
 
 		[DllImport("kernel32.dll")]

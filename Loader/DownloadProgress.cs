@@ -5,9 +5,12 @@ using Timers = System.Timers;
 
 namespace Rynchodon.Loader
 {
+	/// <summary>
+	/// Creates a GUI screen to show download progress.
+	/// </summary>
 	class DownloadProgress : MyGuiScreenProgressAsync, IDisposable
 	{
-		public class Stats
+		internal class Stats
 		{
 			public int CurrentMod, TotalMods;
 		}

@@ -93,8 +93,10 @@
     <Compile Include="LoadArms.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="ModInfo.cs" />
+    <Compile Include="PathExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Release.cs" />
+    <Compile Include="ReleaseCreater.cs" />
     <Compile Include="Version.cs" />
   </ItemGroup>
   <ItemGroup>

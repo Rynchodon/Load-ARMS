@@ -10,7 +10,7 @@ namespace Rynchodon.Injector
 	class CommandLine
 	{
 
-		private enum OptionName : byte { help, author, repo, basedir, publish, version }
+		private enum OptionName : byte { help, author, repo, basedir, oAuthToken, publish, version }
 
 		private class Option
 		{
@@ -22,14 +22,27 @@ namespace Rynchodon.Injector
 			public object Value { get; private set; }
 			public string TypeName { get { return _type == null ? string.Empty : _type.Name; } }
 
-			public Option(string[] alias, string helpMessage, Type contentType = null, bool optional = true)
+			/// <summary>
+			/// Create a new command line option.
+			/// </summary>
+			/// <param name="alias">Possible names for the command.</param>
+			/// <param name="helpMessage">Message displayed when help is requested or required.</param>
+			/// <param name="contentType">The type of content that must be provided in the command line, for a switch this is null.</param>
+			/// <param name="optional">If false this option must be specified or an exception will be thrown.</param>
+			public Option(string[] alias, string helpMessage, Type contentType = null, bool optional = true, object defaultValue = null)
 			{
 				this.Alias = alias;
 				this._type = contentType;
 				this.Optional = optional;
 				this.HelpMessage = helpMessage;
+				this.Value = defaultValue;
 			}
 
+			/// <summary>
+			/// Try to match this option against a string, getting a value if necessary.
+			/// </summary>
+			/// <param name="arg">The string that may contain this option.</param>
+			/// <returns>True iff this option was matched against arg.</returns>
 			public bool Match(string arg)
 			{
 				foreach (string alias in Alias)
@@ -59,41 +72,45 @@ namespace Rynchodon.Injector
 
 		static void Main(string[] args)
 		{
-			try
-			{
+			//try
+			//{
 				if (args == null || args.Length == 0)
 				{
 					DllInjector.Run();
 					return;
 				}
 				Parse(args);
-				Thread.Sleep(3000);
-			}
-			catch (Exception ex)
-			{
-				Console.Error.WriteLine(ex);
-				Thread.Sleep(3000);
-				throw;
-			}
+			//}
+			//catch (Exception ex)
+			//{
+			//	Console.Error.WriteLine(ex);
+			//	Thread.Sleep(60000);
+			//	throw;
+			//}
 		}
 
-		private static Dictionary<OptionName, Option> GetOptions()
+		private static SortedDictionary<OptionName, Option> GetOptions()
 		{
-			Dictionary<OptionName, Option> opts = new Dictionary<OptionName, Option>();
+			SortedDictionary<OptionName, Option> opts = new SortedDictionary<OptionName, Option>();
 
 			opts.Add(OptionName.help, new Option(new string[] { "-h", "--help" }, "print this help message and then exit"));
+
+			// required
 			opts.Add(OptionName.author, new Option(new string[] { "-a=", "--author=" }, "the author of the mod, required", typeof(string), false));
 			opts.Add(OptionName.repo, new Option(new string[] { "-r=", "--repo=", "--repository=" }, "the repository of the mod, required", typeof(string), false));
-			opts.Add(OptionName.basedir, new Option(new string[] { "--basedir=" }, "file paths relative to this directory determine where they will be copied to, defaults to current working directory", typeof(string)));
+
+			// optional
+			opts.Add(OptionName.basedir, new Option(new string[] { "--basedir=" }, "files will be organized relative to this directory, defaults to current working directory", typeof(string), defaultValue: Environment.CurrentDirectory));
+			opts.Add(OptionName.oAuthToken, new Option(new string[] { "--oAuthToken=" }, "token used to log into GitHub, by default the value from the environment variable \"oAuthToken\" will be used", typeof(string)));
 			opts.Add(OptionName.publish, new Option(new string[] { "-p", "--publish" }, "publish the mod to GitHub"));
-			opts.Add(OptionName.version, new Option(new string[] { "-v=", "--version=" }, "the version of the mod, by default the version is determined from the files", typeof(string)));
+			opts.Add(OptionName.version, new Option(new string[] { "-v=", "--version=" }, "the version of the mod, by default the version is the highest file version", typeof(string)));
 
 			return opts;
 		}
 
 		private static void Parse(string[] args)
 		{
-			Dictionary<OptionName, Option> opts = GetOptions();
+			SortedDictionary<OptionName, Option> opts = GetOptions();
 
 			List<string> filePaths = new List<string>();
 			for (int index = 0; index < args.Length; ++index)
@@ -114,9 +131,12 @@ namespace Rynchodon.Injector
 					}
 
 				if (File.Exists(a))
+				{
 					filePaths.Add(a);
+				}
 				else
 				{
+					Console.WriteLine("Not a file: " + Path.GetFullPath(a));
 					PrintHelp(opts);
 					throw new ArgumentException("Invalid argument: " + a);
 				}
@@ -140,7 +160,7 @@ namespace Rynchodon.Injector
 			LocallyCompiled(opts, filePaths);
 		}
 
-		private static void PrintHelp(Dictionary<OptionName, Option> options)
+		private static void PrintHelp(SortedDictionary<OptionName, Option> options)
 		{
 			int longestAlias = 0;
 			int longestType = 0;
@@ -177,23 +197,25 @@ namespace Rynchodon.Injector
 				builder.AppendLine(opt.HelpMessage);
 			}
 
-			builder.AppendLine("All other arguments should be paths to files to include");
+			builder.AppendLine("All other arguments should be paths to files to include.");
 			builder.AppendLine();
 			Console.Write(builder.ToString());
 		}
 
-		private static void LocallyCompiled(Dictionary<OptionName, Option> opts, List<string> filePaths)
+		private static void LocallyCompiled(SortedDictionary<OptionName, Option> opts, List<string> filePaths)
 		{
 			Logger.WriteLine("Adding locally compiled mod");
 
-			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			string dllPath = myDirectory + "\\LoadARMS.dll";
+			List<object> arguments = new List<object>(opts.Count - 1);
+			foreach (KeyValuePair<OptionName, Option> pair in opts)
+				if (pair.Key != OptionName.help)
+					arguments.Add(pair.Value.Value);
+			arguments.Add(filePaths);
 
-			Assembly.LoadFile(dllPath).GetType("Rynchodon.Loader.LoadArms").GetMethod("AddLocallyCompiled", BindingFlags.Static | BindingFlags.Public).Invoke(null,
-				new object[] { opts[OptionName.author].Value, opts[OptionName.repo].Value, opts[OptionName.version].Value, filePaths, opts[OptionName.basedir].Value, opts[OptionName.publish].Value });
-
-			// exception for some reason
-			//Loader.LoadArms.AddLocallyCompiled((string)opts[OptionName.author].Value, (string)opts[OptionName.repo].Value, (string)opts[OptionName.version].Value, filePaths, (string)opts[OptionName.basedir].Value);
+			Assembly.LoadFile(PathExtensions.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LoadARMS.dll")).
+				GetType("Rynchodon.Loader.LoadArms").
+				GetMethod("FromCommandLine", BindingFlags.Static | BindingFlags.Public).
+				Invoke(null, arguments.ToArray());
 		}
 
 	}
