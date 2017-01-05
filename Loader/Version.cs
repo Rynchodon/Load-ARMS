@@ -16,14 +16,18 @@ namespace Rynchodon.Loader
 		[DataMember]
 		public bool StableBuild, UnstableBuild;
 
-		public Version(FileVersionInfo info)
+		public Version(FileVersionInfo info, bool allBuilds)
 		{
 			Major = Math.Max(info.FileMajorPart, info.ProductMajorPart);
 			Minor = Math.Max(info.FileMinorPart, info.ProductMinorPart);
 			Build = Math.Max(info.FileBuildPart, info.ProductBuildPart);
 			Revision = Math.Max(info.FilePrivatePart, info.ProductPrivatePart);
 
-			if (MyFinalBuildConstants.IS_STABLE)
+			if (allBuilds)
+			{
+				StableBuild = UnstableBuild = true;
+			}
+			else if (MyFinalBuildConstants.IS_STABLE)
 			{
 				StableBuild = true;
 				UnstableBuild = false;
@@ -35,6 +39,10 @@ namespace Rynchodon.Loader
 			}
 		}
 
+		/// <summary>
+		/// Construct a version from a string.
+		/// </summary>
+		/// <param name="versionString">The string to create the version from.</param>
 		public Version(string versionString)
 		{
 			Regex versionParts = new Regex(@"(\d+)\.(\d+)\.?(\d*)\.?(\d*)");
@@ -86,6 +94,8 @@ namespace Rynchodon.Loader
 		public override string ToString()
 		{
 			string result = "v" + Major + "." + Minor + "." + Build + "." + Revision;
+			if (StableBuild && UnstableBuild)
+				return result;
 			if (StableBuild)
 				result += stableTag;
 			if (UnstableBuild)

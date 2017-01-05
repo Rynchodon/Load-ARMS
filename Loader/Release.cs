@@ -38,6 +38,7 @@ namespace Rynchodon.Loader
 		[IgnoreDataMember]
 		private Version _version;
 
+		/// <summary>Needs to be in a Version compatible format.</summary>
 		[DataMember]
 		public string tag_name
 		{
@@ -49,6 +50,7 @@ namespace Rynchodon.Loader
 			}
 		}
 
+		/// <summary>Setting this value also sets tag_name.</summary>
 		[IgnoreDataMember]
 		public Version version
 		{
@@ -66,7 +68,7 @@ namespace Rynchodon.Loader
 		/// Special JSON writer for CreateRelease because GitHub won't take null for an answer.
 		/// </summary>
 		/// <param name="targetStream">The stream to write to.</param>
-		public void WriteCreateJson(Stream targetStream)
+		internal void WriteCreateJson(Stream targetStream)
 		{
 			StringBuilder builder = new StringBuilder();
 			List<string> fieldStrings = new List<string>();

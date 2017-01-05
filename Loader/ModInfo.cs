@@ -50,7 +50,7 @@ namespace Rynchodon.Loader
 	/// Info needed to download a mod from github.
 	/// </summary>
 	[DataContract]
-	public class ModInfo : ModName
+	internal class ModInfo : ModName
 	{
 		[DataMember]
 		public bool downloadPrerelease;
@@ -60,7 +60,7 @@ namespace Rynchodon.Loader
 	/// Information about the current version of a mod.
 	/// </summary>
 	[DataContract]
-	public class ModVersion : ModName
+	internal class ModVersion : ModName
 	{
 		[DataMember]
 		public Version version;

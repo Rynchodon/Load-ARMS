@@ -10,7 +10,7 @@ namespace Rynchodon.Injector
 	class CommandLine
 	{
 
-		private enum OptionName : byte { help, author, repo, basedir, oAuthToken, publish, version }
+		private enum OptionName : byte { help, author, repo, allBuilds, basedir, oAuthToken, publish, version }
 
 		private class Option
 		{
@@ -101,6 +101,7 @@ namespace Rynchodon.Injector
 			opts.Add(OptionName.repo, new Option(new string[] { "-r=", "--repo=", "--repository=" }, "the repository of the mod, required", typeof(string), false));
 
 			// optional
+			opts.Add(OptionName.allBuilds, new Option(new string[] { "--allBuilds" }, "If set, this version will be considered compatible with all SE builds"));
 			opts.Add(OptionName.basedir, new Option(new string[] { "--basedir=" }, "files will be organized relative to this directory, defaults to current working directory", typeof(string), defaultValue: Environment.CurrentDirectory));
 			opts.Add(OptionName.oAuthToken, new Option(new string[] { "--oAuthToken=" }, "personal access token used to log into GitHub, by default the value from the environment variable \"oAuthToken\" will be used", typeof(string)));
 			opts.Add(OptionName.publish, new Option(new string[] { "-p", "--publish" }, "publish the mod to GitHub"));
@@ -158,7 +159,7 @@ namespace Rynchodon.Injector
 				throw new ArgumentException("No files specified");
 			}
 
-			LocallyCompiled(opts, filePaths);
+			LocallyCompiled(filePaths, opts);
 		}
 
 		private static void PrintHelp(SortedDictionary<OptionName, Option> options)
@@ -201,24 +202,30 @@ namespace Rynchodon.Injector
 			builder.AppendLine("All other arguments should be paths to files to include.");
 			builder.AppendLine();
 			builder.AppendLine("Example:");
-			builder.AppendLine("-author=Rynchodon -repo=Load-ARMS -publish LoadARMS.exe LoadArms.dll \"..\\..\\..\\..\\Load - ARMS Readme.txt\"");
+			builder.AppendLine(@"If the current directory is ""C:\Path\To\Load-ARMS\Injector\bin\x64\Release"" and the command line is");
+			builder.AppendLine(@"-author=Rynchodon -repo=Load-ARMS -publish LoadARMS.exe LoadArms.dll ""..\..\..\..\Load - ARMS Readme.txt""");
+			builder.AppendLine(@"Add Rynchodon/Load-ARMS to locally compiled and publish");
+			builder.AppendLine(@"LoadARMS.exe, LoadARMS.dll, and Load - ARMS Readme.txt will all be deployed to the same directory");
+			builder.AppendLine();
+			builder.AppendLine(@"If --basedir=""C:\Path\To\Load-ARMS"" were included in the command line");
+			builder.AppendLine(@"LoadARMS.exe, and LoadARMS.dll would be deployed to the subdirectory Injector\bin\x64\Release\");
 			builder.AppendLine();
 			Console.Write(builder.ToString());
 		}
 
-		private static void LocallyCompiled(SortedDictionary<OptionName, Option> opts, List<string> filePaths)
+		private static void LocallyCompiled(List<string> filePaths, SortedDictionary<OptionName, Option> opts)
 		{
 			Logger.WriteLine("Adding locally compiled mod");
 
 			List<object> arguments = new List<object>(opts.Count - 1);
+			arguments.Add(filePaths);
 			foreach (KeyValuePair<OptionName, Option> pair in opts)
 				if (pair.Key != OptionName.help)
 					arguments.Add(pair.Value.Value);
-			arguments.Add(filePaths);
 
 			Assembly.LoadFile(PathExtensions.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LoadARMS.dll")).
 				GetType("Rynchodon.Loader.LoadArms").
-				GetMethod("FromCommandLine", BindingFlags.Static | BindingFlags.Public).
+				GetMethod("AddLocallyCompiledMod", BindingFlags.Static | BindingFlags.Public).
 				Invoke(null, arguments.ToArray());
 		}
 

@@ -26,7 +26,7 @@ namespace Rynchodon.Loader
 			ConfigFileName = "Config.json",
 			DataFileName = "Data.json";
 
-		public const string Rynchodon = "Rynchodon", LoadArmsRepo = "Load-ARMS", ArmsRepo = "ARMS";
+		internal const string Rynchodon = "Rynchodon", LoadArmsRepo = "Load-ARMS", ArmsRepo = "ARMS";
 
 		/// <summary>If both inject and -plugin are used, there will be two LoadArms. This is a reference to the first one created, the second will be suppressed.</summary>
 		private static LoadArms _instance;
@@ -95,9 +95,17 @@ namespace Rynchodon.Loader
 		#endregion
 
 		/// <summary>
-		/// Starting point when run from command line.
+		/// Adds a locally compiled mod and optionally publishes it.
 		/// </summary>
-		public static void FromCommandLine(string author, string repo, string basedir, string oAuthToken, bool publish, string versionString, IEnumerable<string> files)
+		/// <param name="files">Paths to files to include in the mod.</param>
+		/// <param name="author">The author of GitHub repository</param>
+		/// <param name="repo">The name of the GitHub repository</param>
+		/// <param name="allBuilds">If true, version will be stable and unstable. If false, version will match the current SE build.</param>
+		/// <param name="basedir">Files will be orgainzed relative to this directory.</param>
+		/// <param name="oAuthToken">Personal access token for GitHub, it may also be set as an environment variable.</param>
+		/// <param name="publish">If true, publish a release to GitHub</param>
+		/// <param name="versionString">The version of the release. If it is null, the highest version number from any file is used.</param>
+		public static void AddLocallyCompiledMod(IEnumerable<string> files, string author, string repo, bool allBuilds = false, string basedir = null, string oAuthToken = null, bool publish = false, string versionString = null)
 		{
 			if (_instance == null)
 				new LoadArms(false);
@@ -112,7 +120,7 @@ namespace Rynchodon.Loader
 				version = new Version();
 				foreach (string file in files)
 				{
-					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file));
+					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file), allBuilds);
 					if (version.CompareTo(fileVersion) < 0)
 						version = fileVersion;
 				}
@@ -126,7 +134,7 @@ namespace Rynchodon.Loader
 		}
 
 		[DataContract]
-		public struct Config
+		private struct Config
 		{
 			[DataMember]
 			public ModInfo[] GitHubMods;
@@ -135,7 +143,7 @@ namespace Rynchodon.Loader
 		}
 
 		[DataContract]
-		public struct Data
+		private struct Data
 		{
 			[DataMember]
 			public Dictionary<int, ModVersion> ModsCurrentVersions;
@@ -269,7 +277,10 @@ namespace Rynchodon.Loader
 					using (FileStream file = new FileStream(configFilePath, FileMode.Open))
 						_config = (Config)serializer.ReadObject(file);
 					if (_config.GitHubMods != null)
+					{
+						SaveConfig();
 						return;
+					}
 					Logger.WriteLine("ERORR: Saved config is incomplete");
 				}
 				catch (Exception ex)

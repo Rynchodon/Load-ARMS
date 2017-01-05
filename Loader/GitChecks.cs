@@ -8,13 +8,13 @@ namespace Rynchodon.Loader
 	/// <summary>
 	/// Test for git being ready for publishing.
 	/// </summary>
-	class GitChecks
+	public class GitChecks
 	{
 
 		/// <summary>
-		/// Perform all the tests for git being ready.
+		/// Tests for being on the default branch, the branch being up-to-date, and the branch not being dirty.
 		/// </summary>
-		/// <param name="directory">A directory that is part of the repository</param>
+		/// <param name="directory">Any directory that is part of the repository</param>
 		/// <param name="pathToGit">Path to git.exe</param>
 		/// <returns>True if all the tests were passed or the user skipped them.</returns>
 		public static bool Check(string directory, string pathToGit)
@@ -63,7 +63,7 @@ namespace Rynchodon.Loader
 			string[] failMessage = new string[] {
 				"Not on " + _masterBranch + " branch",
 				"Branch not up to date",
-				"There are unstaged changes" };
+				"The branch is dirty" };
 
 			for (int i = 0; i < tests.Length; ++i)
 				while (!tests[i].Invoke())

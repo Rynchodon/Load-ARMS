@@ -4,14 +4,33 @@ using System.Runtime.CompilerServices;
 
 namespace Rynchodon.Loader
 {
-	static class Logger
+	public static class Logger
 	{
 
-		public static string logFile;
+		public delegate void LineWriter(string line, string callerPath, string memberName, int lineNumber);
 
+		internal static string logFile;
+
+		private static LineWriter _lineWriter = WriteLineToStream;
 		private static StreamWriter _writer;
 
-		public static void WriteLine(string line, [CallerFilePath] string callerPath = null, [CallerMemberName] string memberName = null, [CallerLineNumber] int lineNumber = 0)
+		public static void RedirectLogging(Stream loggingStream)
+		{
+			_lineWriter = WriteLineToStream;
+			_writer = new StreamWriter(loggingStream);
+		}
+
+		public static void RedirectLogging(LineWriter lineWriter)
+		{
+			_lineWriter = lineWriter;
+		}
+
+		internal static void WriteLine(string line, [CallerFilePath] string callerPath = null, [CallerMemberName] string memberName = null, [CallerLineNumber] int lineNumber = 0)
+		{
+			_lineWriter(line, callerPath, memberName, lineNumber);
+		}
+
+		internal static void WriteLineToStream(string line, string callerPath = null, string memberName = null, int lineNumber = 0)
 		{
 			if (logFile == null)
 				throw new NullReferenceException("logFile");
