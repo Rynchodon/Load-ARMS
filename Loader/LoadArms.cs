@@ -325,7 +325,8 @@ namespace Rynchodon.Loader
 		{
 			string dataFilePath = PathExtensions.Combine(_directory, DataFileName);
 			FileInfo dataFileInfo = new FileInfo(dataFilePath);
-			dataFileInfo.IsReadOnly = false;
+			if (File.Exists(dataFilePath))
+				dataFileInfo.IsReadOnly = false;
 
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Data));
 			using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(_directory + DataFileName, FileMode.Create), Encoding.UTF8, true, true))
@@ -464,6 +465,7 @@ namespace Rynchodon.Loader
 			current.EraseAllFiles();
 
 			string downloadDirectory = PathExtensions.Combine(_directory, "mods", name.fullName);
+			Directory.CreateDirectory(downloadDirectory);
 			string root = Path.GetPathRoot(baseDir);
 
 			List <string> copied = new List<string>();
