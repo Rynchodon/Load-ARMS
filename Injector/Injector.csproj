@@ -77,7 +77,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>start cmd.exe /C "C:\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\LoadArms.exe" -a=Rynchodon -r=Load-ARMS LoadARMS.exe LoadArms.dll ..\..\..\..\LICENSE ..\..\..\..\Readme.txt</PostBuildEvent>
+    <PostBuildEvent>start cmd.exe /C ""C:\Games\Steam\SteamApps\common\SpaceEngineers\Bin64\LoadArms.exe" -a=Rynchodon -r=Load-ARMS LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt""</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

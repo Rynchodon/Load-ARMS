@@ -65,6 +65,9 @@ namespace Rynchodon.Loader
 						}
 				}
 
+				// force release version to match mod version
+				input.Release.version = modVersion.version;
+
 				Console.WriteLine("Release created");
 				compress.Wait();
 

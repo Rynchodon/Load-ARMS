@@ -80,7 +80,7 @@ namespace Rynchodon.Injector
 					return;
 				}
 				Parse(args);
-				Thread.Sleep(1000);
+				Thread.Sleep(2000);
 			}
 			catch (Exception ex)
 			{
@@ -94,7 +94,7 @@ namespace Rynchodon.Injector
 		{
 			SortedDictionary<OptionName, Option> opts = new SortedDictionary<OptionName, Option>();
 
-			opts.Add(OptionName.help, new Option(new string[] { "-h", "--help" }, "print this help message and then exit"));
+			opts.Add(OptionName.help, new Option(new string[] { "-?", "-h", "--help" }, "print this help message and then exit"));
 
 			// required
 			opts.Add(OptionName.author, new Option(new string[] { "-a=", "--author=" }, "the author of the mod, required", typeof(string), false));
@@ -102,7 +102,7 @@ namespace Rynchodon.Injector
 
 			// optional
 			opts.Add(OptionName.basedir, new Option(new string[] { "--basedir=" }, "files will be organized relative to this directory, defaults to current working directory", typeof(string), defaultValue: Environment.CurrentDirectory));
-			opts.Add(OptionName.oAuthToken, new Option(new string[] { "--oAuthToken=" }, "token used to log into GitHub, by default the value from the environment variable \"oAuthToken\" will be used", typeof(string)));
+			opts.Add(OptionName.oAuthToken, new Option(new string[] { "--oAuthToken=" }, "personal access token used to log into GitHub, by default the value from the environment variable \"oAuthToken\" will be used", typeof(string)));
 			opts.Add(OptionName.publish, new Option(new string[] { "-p", "--publish" }, "publish the mod to GitHub"));
 			opts.Add(OptionName.version, new Option(new string[] { "-v=", "--version=" }, "the version of the mod, by default the version is the highest file version", typeof(string)));
 
@@ -199,6 +199,9 @@ namespace Rynchodon.Injector
 			}
 
 			builder.AppendLine("All other arguments should be paths to files to include.");
+			builder.AppendLine();
+			builder.AppendLine("Example:");
+			builder.AppendLine("-author=Rynchodon -repo=Load-ARMS -publish LoadARMS.exe LoadArms.dll \"..\\..\\..\\..\\Load - ARMS Readme.txt\"");
 			builder.AppendLine();
 			Console.Write(builder.ToString());
 		}

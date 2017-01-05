@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Rynchodon.Loader
@@ -32,6 +33,18 @@ namespace Rynchodon.Loader
 					path += Path.DirectorySeparatorChar + pp;
 			}
 			return path;
+		}
+
+		public static IEnumerable<string> PathsToRoot(string path)
+		{
+			if (!Path.IsPathRooted(path))
+				throw new ArgumentException("Path is not rooted: " + path);
+			string root = Path.GetPathRoot(path);
+			while (path != root)
+			{
+				yield return path;
+				path = Path.GetDirectoryName(path);
+			}
 		}
 
 	}

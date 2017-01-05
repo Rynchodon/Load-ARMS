@@ -89,6 +89,7 @@
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
     <Compile Include="DownloadProgress.cs" />
+    <Compile Include="GitChecks.cs" />
     <Compile Include="GitHubClient.cs" />
     <Compile Include="LoadArms.cs" />
     <Compile Include="Logger.cs" />

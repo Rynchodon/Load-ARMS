@@ -22,11 +22,11 @@ namespace Rynchodon.Loader
 	{
 
 		private const string
-			launcherArgs = "-plugin LoadArms.exe",
-			configFilePath = "Config.json",
-			dataFilePath = "Data.json";
+			LauncherArgs = "-plugin LoadArms.exe",
+			ConfigFileName = "Config.json",
+			DataFileName = "Data.json";
 
-		private const string authRyn = "Rynchodon", repoLoad = "Load-ARMS", repoArms = "ARMS";
+		public const string Rynchodon = "Rynchodon", LoadArmsRepo = "Load-ARMS", ArmsRepo = "ARMS";
 
 		/// <summary>If both inject and -plugin are used, there will be two LoadArms. This is a reference to the first one created, the second will be suppressed.</summary>
 		private static LoadArms _instance;
@@ -118,9 +118,10 @@ namespace Rynchodon.Loader
 				}
 			}
 
+			_instance.Load();
 			ModVersion modVersion = _instance.AddLocallyCompiled(name, version, files, basedir);
 
-			if (publish)
+			if (publish && GitChecks.Check(basedir, _instance._config.PathToGit))
 				ReleaseCreater.Publish(modVersion, PathExtensions.Combine(_instance._directory, "mods", name.fullName), oAuthToken);
 		}
 
@@ -129,6 +130,8 @@ namespace Rynchodon.Loader
 		{
 			[DataMember]
 			public ModInfo[] GitHubMods;
+			[DataMember]
+			public string PathToGit;
 		}
 
 		[DataContract]
@@ -241,7 +244,10 @@ namespace Rynchodon.Loader
 				foreach (IPlugin plugin in LoadPlugins())
 					plugin.Init(MySandboxGame.Static);
 
-				// TODO: more cleanup
+				_directory = null;
+				_config = default(Config);
+				_data = default(Data);
+				_task = default(ParallelTasks.Task);
 				_downProgress = null;
 			}
 		}
@@ -254,7 +260,7 @@ namespace Rynchodon.Loader
 
 		private void LoadConfig()
 		{
-			string configFilePath = _directory + LoadArms.configFilePath;
+			string configFilePath = _directory + LoadArms.ConfigFileName;
 			if (File.Exists(configFilePath))
 			{
 				try
@@ -268,7 +274,8 @@ namespace Rynchodon.Loader
 				}
 				catch (Exception ex)
 				{
-					Logger.WriteLine("ERROR: Failed to read saved config:\n" + ex);
+					Logger.WriteLine("ERROR: Failed to read saved config");
+					throw ex;
 				}
 			}
 
@@ -278,21 +285,28 @@ namespace Rynchodon.Loader
 
 		private void LoadData()
 		{
-			string dataFilePath = _directory + LoadArms.dataFilePath;
+			string dataFilePath = PathExtensions.Combine(_directory, DataFileName);
 			if (File.Exists(dataFilePath))
 			{
 				try
 				{
+					FileInfo dataFileInfo = new FileInfo(dataFilePath);
+					dataFileInfo.IsReadOnly = false;
+
 					DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Data));
 					using (FileStream file = new FileStream(dataFilePath, FileMode.Open))
 						_data = (Data)serializer.ReadObject(file);
+
+					dataFileInfo.IsReadOnly = true;
+
 					if (_data.ModsCurrentVersions != null)
 						return;
 					Logger.WriteLine("ERROR: Saved data is incomplete");
 				}
 				catch (Exception ex)
 				{
-					Logger.WriteLine("ERROR: Failed to read saved data:\n" + ex);
+					Logger.WriteLine("ERROR: Failed to read saved data");
+					throw ex;
 				}
 			}
 
@@ -303,15 +317,21 @@ namespace Rynchodon.Loader
 		private void SaveConfig()
 		{
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Config));
-			using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(_directory + configFilePath, FileMode.Create), Encoding.UTF8, true, true))
+			using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(_directory + ConfigFileName, FileMode.Create), Encoding.UTF8, true, true))
 				serializer.WriteObject(writer, _config);
 		}
 
 		private void SaveData()
 		{
+			string dataFilePath = PathExtensions.Combine(_directory, DataFileName);
+			FileInfo dataFileInfo = new FileInfo(dataFilePath);
+			dataFileInfo.IsReadOnly = false;
+
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Data));
-			using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(_directory + dataFilePath, FileMode.Create), Encoding.UTF8, true, true))
+			using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(_directory + DataFileName, FileMode.Create), Encoding.UTF8, true, true))
 				serializer.WriteObject(writer, _data);
+
+			dataFileInfo.IsReadOnly = true;
 		}
 
 		private void UpdateMods()
@@ -367,6 +387,9 @@ namespace Rynchodon.Loader
 
 		private bool LoadPlugins(List<IPlugin> chainedPlugins, ModVersion mod, HashSet<ModVersion> loadedMods, int depth = 0)
 		{
+			if (mod.author == Rynchodon && mod.repository == LoadArmsRepo)
+				return true;
+
 			if (loadedMods.Contains(mod))
 				return true;
 			if (depth > 100)
@@ -429,8 +452,6 @@ namespace Rynchodon.Loader
 
 		private ModVersion AddLocallyCompiled(ModName name, Version version, IEnumerable<string> files, string baseDir)
 		{
-			LoadData();
-
 			int hashCode = name.GetHashCode();
 			ModVersion current;
 			if (!_data.ModsCurrentVersions.TryGetValue(hashCode, out current))
@@ -477,7 +498,7 @@ namespace Rynchodon.Loader
 
 			SaveData();
 
-			if (name.author == authRyn && name.repository == repoLoad)
+			if (name.author == Rynchodon && name.repository == LoadArmsRepo)
 				Robocopy();
 
 			return current;
@@ -487,7 +508,7 @@ namespace Rynchodon.Loader
 		{
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\";
 
-			foreach (string fileName in new string[] { "ARMS.dll", "ARMS - Release Notes.txt", "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log", "LoadARMS.log" })
+			foreach (string fileName in new string[] { "ARMS.dll", "ARMS - Release Notes.txt", "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log", "LoadARMS.log" , "Load-ARMS Readme.txt" })
 			{
 				string fullPath = myDirectory + fileName;
 				if (File.Exists(fullPath))
@@ -501,8 +522,8 @@ namespace Rynchodon.Loader
 		private ModInfo[] DefaultModInfo()
 		{
 			return new ModInfo[] {
-				new ModInfo() { author = authRyn, repository = repoArms },
-				new ModInfo() { author = authRyn, repository = repoLoad }
+				new ModInfo() { author = Rynchodon, repository = ArmsRepo },
+				new ModInfo() { author = Rynchodon, repository = LoadArmsRepo }
 			};
 		}
 

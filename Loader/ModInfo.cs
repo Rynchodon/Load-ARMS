@@ -53,7 +53,7 @@ namespace Rynchodon.Loader
 	public class ModInfo : ModName
 	{
 		[DataMember]
-		public bool downloadPreRelease;
+		public bool downloadPrerelease;
 	}
 
 	/// <summary>

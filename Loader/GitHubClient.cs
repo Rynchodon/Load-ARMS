@@ -246,7 +246,7 @@ namespace Rynchodon.Loader
 			{
 				if (rel.draft)
 					continue;
-				if (rel.prerelease && !info.downloadPreRelease)
+				if (rel.prerelease && !info.downloadPrerelease)
 					continue;
 
 				if (MyFinalBuildConstants.IS_STABLE ? rel.version.StableBuild : rel.version.UnstableBuild)
@@ -271,6 +271,12 @@ namespace Rynchodon.Loader
 				if (current.locallyCompiled)
 				{
 					Logger.WriteLine("Locally compiled version: " + current.version);
+					return false;
+				}
+				// keep Load-ARMS from rolling back to a version that does not update itself
+				if (current.author == LoadArms.Rynchodon && current.repository == LoadArms.LoadArmsRepo && mostRecent.version.Major < 5)
+				{
+					Logger.WriteLine("Cannot roll back to earlier version of LoadARMS");
 					return false;
 				}
 				Logger.WriteLine("Rolling back version: " + current.version);
