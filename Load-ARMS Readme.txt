@@ -31,7 +31,7 @@ Modders
 =======
 Load-ARMS has command line options for adding locally compiled mods and publishing them to GitHub, this is the easiest way to make sure Load-ARMS can download them and load them into Space Engineers.
 
-Load-ARMS loads mods as plugins, so make sure you have at least one class that implements VRage.Plugins.IPlugin.
+Load-ARMS will call Init and Update on every class that implements VRage.Plugins.IPlugin in loaded mods. Any other registrations need to be handled by the loaded mod.
 
 To publish a mod, you will need a public repository on GitHub and a personal access token with the scope public_repo. See https://help.github.com/articles/creating-an-access-token-for-command-line-use/
 

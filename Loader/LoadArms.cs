@@ -154,7 +154,8 @@ namespace Rynchodon.Loader
 		private Data _data;
 		private ParallelTasks.Task _task;
 		private DownloadProgress.Stats _downProgress = new DownloadProgress.Stats();
-		private bool _startedRobocopy, _loadedPlugins;
+		private List<IPlugin> _plugins;
+		private bool _startedRobocopy;
 
 		/// <summary>
 		/// Creates an instance of LoadArms and starts the updating process.
@@ -245,11 +246,16 @@ namespace Rynchodon.Loader
 			if (_instance != this)
 				return;
 
-			if (!_loadedPlugins && _task.IsComplete)
+			if (_plugins != null)
+			{
+				foreach (IPlugin plugin in _plugins)
+					plugin.Update();
+			}
+			else if (_task.IsComplete)
 			{
 				Logger.WriteLine("Finished task, loading plugins");
-				_loadedPlugins = true;
-				foreach (IPlugin plugin in LoadPlugins())
+				_plugins = LoadPlugins();
+				foreach (IPlugin plugin in _plugins)
 					plugin.Init(MySandboxGame.Static);
 
 				_directory = null;
@@ -385,14 +391,6 @@ namespace Rynchodon.Loader
 
 			foreach (ModVersion mod in _data.ModsCurrentVersions.Values)
 				LoadPlugins(chainedPlugins, mod, loadedMods);
-
-			Logger.WriteLine("Adding plugins to MyPlugins");
-
-			FieldInfo MyPlugins__m_plugins = typeof(MyPlugins).GetField("m_plugins", BindingFlags.Static | BindingFlags.NonPublic);
-			List<IPlugin> allPlugins = (List<IPlugin>)MyPlugins__m_plugins.GetValue(null);
-			allPlugins = new List<IPlugin>(allPlugins);
-			allPlugins.AddList(chainedPlugins);
-			MyPlugins__m_plugins.SetValue(null, allPlugins);
 
 			return chainedPlugins;
 		}
