@@ -52,8 +52,10 @@ namespace Rynchodon.Loader
 	[DataContract]
 	internal class ModInfo : ModName
 	{
+#pragma warning disable CS0649
 		[DataMember]
 		public bool downloadPrerelease;
+#pragma warning restore CS0649
 	}
 
 	/// <summary>
@@ -69,9 +71,11 @@ namespace Rynchodon.Loader
 		public bool locallyCompiled;
 		[DataMember]
 		public string[] filePaths;
+#pragma warning disable CS0649
 		/// <summary>Mods that need to be loaded before this one. Should not contain subclasses of ModName.</summary>
 		[DataMember]
 		public ModName[] requirements;
+#pragma warning restore CS0649
 
 		public ModVersion() { }
 

@@ -138,8 +138,10 @@ namespace Rynchodon.Loader
 		{
 			[DataMember]
 			public ModInfo[] GitHubMods;
+#pragma warning disable CS0649
 			[DataMember]
 			public string PathToGit;
+#pragma warning restore CS0649
 		}
 
 		[DataContract]
