@@ -210,6 +210,10 @@ namespace Rynchodon.Loader
 				return;
 			_startedRobocopy = true;
 
+			string license = PathExtensions.Combine(_directory, "mods\\Rynchodon.Load-ARMS\\Load-ARMS License.txt");
+			if (File.Exists(license))
+				File.Copy(license, PathExtensions.Combine(_directory, "License.txt"), true);
+
 			Logger.WriteLine("starting robocopy");
 
 			string first = '"' + _directory + "mods\\Rynchodon.Load-ARMS\" \"" + _directory + "..\\";
@@ -258,7 +262,6 @@ namespace Rynchodon.Loader
 				foreach (IPlugin plugin in _plugins)
 					plugin.Init(MySandboxGame.Static);
 
-				_directory = null;
 				_config = default(Config);
 				_data = default(Data);
 				_task = default(ParallelTasks.Task);
@@ -519,7 +522,7 @@ namespace Rynchodon.Loader
 		{
 			string myDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\";
 
-			foreach (string fileName in new string[] { "ARMS.dll", "ARMS - Release Notes.txt", "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log", "LoadARMS.log" , "Load-ARMS Readme.txt" })
+			foreach (string fileName in new string[] { "ARMS.dll", "ARMS - Release Notes.txt", "ExtendWhitelist.exe", "ExtendWhitelist.dll", "ExtendWhitelist.log", "LoadARMS.log", "Load-ARMS Readme.txt", "Load-ARMS License.txt" })
 			{
 				string fullPath = myDirectory + fileName;
 				if (File.Exists(fullPath))

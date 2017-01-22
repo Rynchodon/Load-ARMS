@@ -6,7 +6,7 @@ using Timers = System.Timers;
 namespace Rynchodon.Loader
 {
 	/// <summary>
-	/// Creates a GUI screen to show download progress.
+	/// Creates a GUI screen to show download progress. This screen prevents the player from doing anything until it closes.
 	/// </summary>
 	class DownloadProgress : MyGuiScreenProgressAsync, IDisposable
 	{

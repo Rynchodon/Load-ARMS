@@ -14,6 +14,9 @@ namespace Rynchodon.Loader
 		/// <returns>The combined paths.</returns>
 		public static string Combine(params string[] pathParts)
 		{
+			if (pathParts == null)
+				throw new ArgumentNullException("pathParts");
+
 			int index = 0;
 			string path = pathParts[index];
 			if (path == null)

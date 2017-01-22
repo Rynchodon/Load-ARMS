@@ -72,7 +72,7 @@ namespace Rynchodon.Loader
 				compress.Wait();
 
 				if (input.ZipFileName == null)
-					input.ZipFileName = modVersion.fullName + ".zip";
+					input.ZipFileName = modVersion.repository + ".zip";
 				else if (!input.ZipFileName.EndsWith(".zip"))
 					input.ZipFileName = input.ZipFileName + ".zip";
 

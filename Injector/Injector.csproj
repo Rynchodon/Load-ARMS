@@ -78,7 +78,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\global.config" />
   <PropertyGroup>
-    <PostBuildEvent>start cmd.exe /C ""$(ReferencePath)\LoadArms.exe" --author=Rynchodon --repo=Load-ARMS --allBuilds LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt""</PostBuildEvent>
+    <PostBuildEvent>start cmd.exe /C ""$(ReferencePath)\LoadArms.exe" --author=Rynchodon --repo=Load-ARMS --allBuilds LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt" "..\..\..\..\Load-ARMS License.txt""</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
