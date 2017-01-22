@@ -10,7 +10,9 @@ using System.Threading;
 using System.Xml;
 using RGiesecke.DllExport;
 using Sandbox;
+using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
+using VRage.Game.Components;
 using VRage.Plugins;
 
 namespace Rynchodon.Loader
@@ -82,8 +84,7 @@ namespace Rynchodon.Loader
 				{
 					if (_instance != null)
 						return;
-					LoadArms instance = new LoadArms();
-					MySandboxGame.Static.Invoke(() => instance.Init(MySandboxGame.Static));
+					MySandboxGame.Static.Invoke(() => typeof(MyPlugins).GetMethod("LoadPlugins", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { Assembly.GetExecutingAssembly() }));
 					return;
 				}
 				Thread.Sleep(1);
@@ -157,7 +158,7 @@ namespace Rynchodon.Loader
 		private ParallelTasks.Task _task;
 		private DownloadProgress.Stats _downProgress = new DownloadProgress.Stats();
 		private List<IPlugin> _plugins;
-		private bool _startedRobocopy;
+		private bool _initialized, _startedRobocopy;
 
 		/// <summary>
 		/// Creates an instance of LoadArms and starts the updating process.
@@ -239,6 +240,7 @@ namespace Rynchodon.Loader
 		{
 			if (_instance != this)
 				return;
+			_initialized = true;
 
 			if (!_task.IsComplete)
 				MyGuiSandbox.AddScreen(new DownloadProgress(_task, _downProgress));
@@ -251,6 +253,8 @@ namespace Rynchodon.Loader
 		{
 			if (_instance != this)
 				return;
+			if (!_initialized)
+				Init(MySandboxGame.Static);
 
 			if (_plugins != null)
 			{

@@ -73,12 +73,14 @@
     <ProjectReference Include="..\Loader\Loader.csproj">
       <Project>{5c2d3832-ddcb-4c1d-855c-5510625db149}</Project>
       <Name>Loader</Name>
+      <Private>False</Private>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\global.config" />
   <PropertyGroup>
-    <PostBuildEvent>start cmd.exe /C ""$(ReferencePath)\LoadArms.exe" --author=Rynchodon --repo=Load-ARMS --allBuilds LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt" "..\..\..\..\Load-ARMS License.txt""</PostBuildEvent>
+    <PostBuildEvent>copy ..\..\..\..\Loader\bin\x64\Release\LoadARMS.dll LoadARMS.dll
+    start cmd.exe /C ""$(ReferencePath)\LoadArms.exe" --author=Rynchodon --repo=Load-ARMS --allBuilds LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt" "..\..\..\..\Load-ARMS License.txt""</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
