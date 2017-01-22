@@ -57,19 +57,12 @@ namespace Rynchodon.Loader
 				if (!File.Exists(path))
 					throw new ArgumentException("File does not exist: " + path);
 
-			// check for extant release
-			Release[] releases = GetReleases();
-			if (releases == null)
+			string fail;
+			if (!CanCreateRelease(create.version, out fail))
 			{
-				Logger.WriteLine("Failed to download releases");
+				Logger.WriteLine(fail);
 				return false;
 			}
-			foreach (Release rel in releases)
-				if (rel.version.CompareTo(create.version) == 0)
-				{
-					Logger.WriteLine("Release exists: " + create.version);
-					return false;
-				}
 
 			// release needs to be draft while it is being created, in case of failure
 			bool draft = create.draft;
@@ -125,6 +118,31 @@ namespace Rynchodon.Loader
 			_releases = null; // needs to be updated
 
 			Logger.WriteLine("Release published");
+			return true;
+		}
+
+		/// <summary>
+		/// Checks if a release with a specified version can be created.
+		/// </summary>
+		/// <param name="version">A version that might be in use.</param>
+		/// <param name="reason">In the event of failure, the reason for the failure.</param>
+		public bool CanCreateRelease(Version version, out string reason)
+		{
+			Release[] releases = GetReleases();
+			if (releases == null)
+			{
+				reason = "Failed to download releases";
+				return false;
+			}
+
+			foreach (Release release in releases)
+				if (release.version.CompareTo(version) == 0)
+				{
+					reason = "Release exists: " + version;
+					return false;
+				}
+
+			reason = null;
 			return true;
 		}
 

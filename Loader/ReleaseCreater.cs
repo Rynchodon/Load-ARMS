@@ -45,6 +45,13 @@ namespace Rynchodon.Loader
 				using (XmlDictionaryWriter writer = JsonReaderWriterFactory.CreateJsonWriter(new FileStream(releaseFile, FileMode.CreateNew), Encoding.UTF8, true, true))
 					serializer.WriteObject(writer, input);
 
+				string fail;
+				if (!client.CanCreateRelease(modVersion.version, out fail))
+				{
+					Console.WriteLine(fail);
+					return;
+				}
+
 				while (true)
 				{
 					Process edit = Process.Start(releaseFile);
