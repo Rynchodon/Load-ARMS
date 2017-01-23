@@ -184,6 +184,8 @@ namespace Rynchodon.Loader
 			Directory.CreateDirectory(_directory);
 			Logger.logFile = _directory + "Load-ARMS.log";
 
+			Logger.WriteLine("Load-ARMS version: " + new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location), true));
+			
 			if (start)
 				_task = ParallelTasks.Parallel.StartBackground(Run);
 		}
