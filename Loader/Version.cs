@@ -27,8 +27,7 @@ namespace Rynchodon.Loader
 			{
 				StableBuild = UnstableBuild = true;
 			}
-#pragma warning disable CS0162
-			else if (MyFinalBuildConstants.IS_STABLE)
+			else if ((bool)typeof(MyFinalBuildConstants).GetField("IS_STABLE").GetValue(null))
 			{
 				StableBuild = true;
 				UnstableBuild = false;
@@ -38,7 +37,6 @@ namespace Rynchodon.Loader
 				StableBuild = false;
 				UnstableBuild = true;
 			}
-#pragma warning restore CS0162
 		}
 
 		/// <summary>
