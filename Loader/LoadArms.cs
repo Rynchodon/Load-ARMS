@@ -10,9 +10,8 @@ using System.Threading;
 using System.Xml;
 using RGiesecke.DllExport;
 using Sandbox;
-using Sandbox.Game.World;
+using Sandbox.Engine.Platform;
 using Sandbox.Graphics.GUI;
-using VRage.Game.Components;
 using VRage.Plugins;
 
 namespace Rynchodon.Loader
@@ -22,7 +21,6 @@ namespace Rynchodon.Loader
 	/// </summary>
 	public class LoadArms : IPlugin
 	{
-
 		private const string
 			LauncherArgs = "-plugin LoadArms.exe",
 			ConfigFileName = "Config.json",
@@ -182,8 +180,8 @@ namespace Rynchodon.Loader
 
 			_directory = Path.GetDirectoryName(_directory) + "\\Load-ARMS\\";
 			Directory.CreateDirectory(_directory);
-			Logger.logFile = _directory + "Load-ARMS.log";
 
+			Logger.logFile = _directory + (Game.IsDedicated ? "Load-ARMS Dedicated.log" : "Load-ARMS.log");
 			Logger.WriteLine("Load-ARMS version: " + new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location), true));
 			
 			if (start)
@@ -244,7 +242,7 @@ namespace Rynchodon.Loader
 				return;
 			_initialized = true;
 
-			if (!_task.IsComplete)
+			if (!_task.IsComplete && !Game.IsDedicated)
 				MyGuiSandbox.AddScreen(new DownloadProgress(_task, _downProgress));
 		}
 
