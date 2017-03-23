@@ -29,9 +29,9 @@ namespace Rynchodon.Loader
 			GitHubClient client = new GitHubClient(modVersion, oAuthToken);
 			if (!client.HasOAuthToken)
 				throw new ArgumentException("Need oAuthToken");
-
+			
 			Input input = new Input();
-			input.Release = new CreateRelease(modVersion.version, modVersion.seVersion, true);
+			input.Release = new CreateRelease(modVersion.version, true);
 			string tag_name = input.Release.tag_name;
 
 			string zipTempFile = PathExtensions.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".zip");

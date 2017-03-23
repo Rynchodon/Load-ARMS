@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.IO;
 using System.Runtime.Serialization;
 
@@ -68,9 +67,6 @@ namespace Rynchodon.Loader
 		/// <summary>The version of the mod.</summary>
 		[DataMember]
 		public Version version;
-		/// <summary>The version of Space Engineers the mod was compiled against.</summary>
-		[DataMember]
-		public int seVersion;
 		/// <summary>Allows version to be greater than latest release.</summary>
 		[DataMember]
 		public bool locallyCompiled;

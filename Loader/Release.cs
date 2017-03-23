@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Rynchodon.Loader
 {
@@ -44,33 +43,20 @@ namespace Rynchodon.Loader
 			get { return _tag_name; }
 			set
 			{
-				Match match = Regex.Match(value, @"-SE(\d+)");
-				if (!match.Success)
-					seVersion = 0;
-				else
-				{
-					string group = match.Groups[1].Value;
-					seVersion = string.IsNullOrWhiteSpace(group) ? 0 : int.Parse(group);
-				}
-
-				_tag_name = value;
 				version = new Version(value);
+				_tag_name = value;
 			}
 		}
 
 		[IgnoreDataMember]
 		public Version version { get; private set; }
 
-		[IgnoreDataMember]
-		public int seVersion { get; private set; }
-
 		public CreateRelease() { }
 
-		public CreateRelease(Version modVersion, int seVersion, bool draft)
+		public CreateRelease(Version modVersion, bool draft)
 		{
 			this.version = modVersion;
-			this.seVersion = seVersion;
-			this.tag_name = modVersion.ToString() + "-SE" + seVersion;
+			this.tag_name = modVersion.ToString();
 			this.draft = draft;
 		}
 

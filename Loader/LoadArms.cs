@@ -100,12 +100,12 @@ namespace Rynchodon.Loader
 		/// <param name="files">Paths to files to include in the mod.</param>
 		/// <param name="author">The author of GitHub repository</param>
 		/// <param name="repo">The name of the GitHub repository</param>
-		/// <param name="allBuilds">If true, version will be stable and unstable. If false, version will match the current SE build.</param>
+		/// <param name="allBuilds">If true and seVersion is zero, the mod will be considered compatible with all Space Engineers versions.</param>
 		/// <param name="basedir">Files will be orgainzed relative to this directory.</param>
 		/// <param name="oAuthToken">Personal access token for GitHub, it may also be set as an environment variable.</param>
 		/// <param name="publish">If true, publish a release to GitHub</param>
 		/// <param name="versionString">The version of the release. If it is null, the highest version number from any file is used.</param>
-		/// <param name="seVersion">Version of Space Engineers the mod was compiled against.</param>
+		/// <param name="seVersion">Version of Space Engineers the mod was compiled against. 0 - get version from SpaceEngineersGame, unless allBuilds is true.</param>
 		public static void AddLocallyCompiledMod(IEnumerable<string> files, string author, string repo, bool allBuilds = false, string basedir = null, string oAuthToken = null, bool publish = false, string versionString = null, int seVersion = 0)
 		{
 			if (_instance == null)
@@ -113,7 +113,11 @@ namespace Rynchodon.Loader
 
 			ModName name = new ModName(author, repo);
 
+			if (seVersion < 1 && !allBuilds)
+				seVersion = GetCurrentSEVersion();
+
 			Version version;
+			version.SeVersion = seVersion;
 			if (versionString != null)
 				version = new Version(versionString);
 			else
@@ -121,14 +125,11 @@ namespace Rynchodon.Loader
 				version = new Version();
 				foreach (string file in files)
 				{
-					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file), allBuilds);
+					Version fileVersion = new Version(FileVersionInfo.GetVersionInfo(file), seVersion);
 					if (version.CompareTo(fileVersion) < 0)
 						version = fileVersion;
 				}
 			}
-
-			if (seVersion < 1)
-				seVersion = GetCurrentSEVersion();
 
 			_instance.Load();
 			ModVersion modVersion = _instance.AddLocallyCompiled(name, version, seVersion, files, basedir);
@@ -199,7 +200,7 @@ namespace Rynchodon.Loader
 			Directory.CreateDirectory(_directory);
 
 			Logger.logFile = _directory + (Game.IsDedicated ? "Load-ARMS Dedicated.log" : "Load-ARMS.log");
-			Logger.WriteLine("Load-ARMS version: " + new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location), true));
+			Logger.WriteLine("Load-ARMS version: " + new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location), 0));
 			
 			if (start)
 				_task = ParallelTasks.Parallel.StartBackground(Run);
@@ -496,7 +497,6 @@ namespace Rynchodon.Loader
 				_data.ModsCurrentVersions.Add(hashCode, current);
 			}
 			current.version = version;
-			current.seVersion = seVersion;
 			Logger.WriteLine("mod: " + name.fullName + ", compiled version: " + current.version);
 			current.EraseAllFiles();
 

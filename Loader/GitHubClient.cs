@@ -6,8 +6,6 @@ using System.Net;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SpaceEngineers.Game;
-using VRage.Game;
 
 namespace Rynchodon.Loader
 {
@@ -272,10 +270,7 @@ namespace Rynchodon.Loader
 					continue;
 
 				// skip if release was compiled with a newer version of SE
-				if (seVersion < rel.seVersion)
-					continue;
-
-				if (!BuildTest.MatchesCurrent(rel.version))
+				if (seVersion < rel.version.SeVersion)
 					continue;
 
 				if (mostRecent == null || mostRecent.version.CompareTo(rel.version) < 0)
@@ -296,9 +291,9 @@ namespace Rynchodon.Loader
 				Logger.WriteLine("Up-to-date: " + current.version);
 				return false;
 			}
-			if (relative < 0) // current version is newer than latest
+			if (relative < 0) // current version is newer than latest release
 			{
-				if (current.locallyCompiled && BuildTest.MatchesCurrent(current.version))
+				if (current.locallyCompiled)
 				{
 					Logger.WriteLine("Keeping locally compiled version: " + current.version);
 					return false;

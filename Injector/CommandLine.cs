@@ -90,7 +90,7 @@ namespace Rynchodon.Injector
 			opts.Add(OptionName.repo, new Option(new string[] { "-r=", "--repo=", "--repository=" }, "the repository of the mod, required", typeof(string), false));
 
 			// optional
-			opts.Add(OptionName.allBuilds, new Option(new string[] { "--allBuilds" }, "If set, this version will be considered compatible with all SE builds"));
+			opts.Add(OptionName.allBuilds, new Option(new string[] { "--allBuilds" }, "If set and --seVersion is not set, the mod will be considered compatible with all Space Engineers versions."));
 			opts.Add(OptionName.basedir, new Option(new string[] { "--basedir=" }, "files will be organized relative to this directory, defaults to current working directory", typeof(string), defaultValue: Environment.CurrentDirectory));
 			opts.Add(OptionName.oAuthToken, new Option(new string[] { "--oAuthToken=" }, "personal access token used to log into GitHub, by default the value from the environment variable \"oAuthToken\" will be used", typeof(string)));
 			opts.Add(OptionName.publish, new Option(new string[] { "-p", "--publish" }, "publish the mod to GitHub"));
