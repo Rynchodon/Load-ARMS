@@ -9,7 +9,7 @@ namespace Rynchodon.Injector
 	class CommandLine
 	{
 
-		private enum OptionName : byte { help, author, repo, allBuilds, basedir, oAuthToken, publish, version }
+		private enum OptionName : byte { help, author, repo, allBuilds, basedir, oAuthToken, publish, version, seVersion }
 
 		private class Option
 		{
@@ -95,6 +95,7 @@ namespace Rynchodon.Injector
 			opts.Add(OptionName.oAuthToken, new Option(new string[] { "--oAuthToken=" }, "personal access token used to log into GitHub, by default the value from the environment variable \"oAuthToken\" will be used", typeof(string)));
 			opts.Add(OptionName.publish, new Option(new string[] { "-p", "--publish" }, "publish the mod to GitHub"));
 			opts.Add(OptionName.version, new Option(new string[] { "-v=", "--version=" }, "the version of the mod, by default the version is the highest file version", typeof(string)));
+			opts.Add(OptionName.seVersion, new Option(new string[] { "--se=", "--sev=", "--seVersion" }, "the version of Space Engineers the mod was compiled against, by default get the version from SpaceEngineersGame.SE_VERSION", typeof(int)));
 
 			return opts;
 		}

@@ -80,7 +80,8 @@
   <Import Project="$(SolutionDir)\global.config" />
   <PropertyGroup>
     <PostBuildEvent>copy ..\..\..\..\Loader\bin\x64\Release\LoadARMS.dll LoadARMS.dll
-    start cmd.exe /C ""$(ReferencePath)\LoadArms.exe" --author=Rynchodon --repo=Load-ARMS --allBuilds LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt" "..\..\..\..\Load-ARMS License.txt""</PostBuildEvent>
+
+start cmd.exe /C ""$(ReferencePath)\LoadArms.exe" --author=Rynchodon --repo=Load-ARMS --allBuilds LoadARMS.exe LoadArms.dll "..\..\..\..\Load-ARMS Readme.txt" "..\..\..\..\Load-ARMS License.txt""</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>

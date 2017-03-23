@@ -30,7 +30,7 @@ namespace Rynchodon.Loader
 			_lineWriter(line, callerPath, memberName, lineNumber);
 		}
 
-		internal static void WriteLineToStream(string line, string callerPath = null, string memberName = null, int lineNumber = 0)
+		private static void WriteLineToStream(string line, string callerPath = null, string memberName = null, int lineNumber = 0)
 		{
 			if (logFile == null)
 				throw new NullReferenceException("logFile");

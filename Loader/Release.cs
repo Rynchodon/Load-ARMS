@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Rynchodon.Loader
 {
@@ -35,8 +36,6 @@ namespace Rynchodon.Loader
 
 		[IgnoreDataMember]
 		private string _tag_name;
-		[IgnoreDataMember]
-		private Version _version;
 
 		/// <summary>Needs to be in a Version compatible format.</summary>
 		[DataMember]
@@ -45,24 +44,35 @@ namespace Rynchodon.Loader
 			get { return _tag_name; }
 			set
 			{
+				Match match = Regex.Match(value, @"-SE(\d+)");
+				if (!match.Success)
+					seVersion = 0;
+				else
+				{
+					string group = match.Groups[1].Value;
+					seVersion = string.IsNullOrWhiteSpace(group) ? 0 : int.Parse(group);
+				}
+
 				_tag_name = value;
-				_version = new Version(value);
+				version = new Version(value);
 			}
 		}
 
-		/// <summary>Setting this value also sets tag_name.</summary>
 		[IgnoreDataMember]
-		public Version version
-		{
-			get { return _version; }
-			set
-			{
-				_version = value;
-				_tag_name = _version.ToString();
-			}
-		}
+		public Version version { get; private set; }
+
+		[IgnoreDataMember]
+		public int seVersion { get; private set; }
 
 		public CreateRelease() { }
+
+		public CreateRelease(Version modVersion, int seVersion, bool draft)
+		{
+			this.version = modVersion;
+			this.seVersion = seVersion;
+			this.tag_name = modVersion.ToString() + "-SE" + seVersion;
+			this.draft = draft;
+		}
 
 		/// <summary>
 		/// Special JSON writer for CreateRelease because GitHub won't take null for an answer.

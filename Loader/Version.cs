@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
-using VRage.Game;
 
 namespace Rynchodon.Loader
 {
@@ -27,15 +26,15 @@ namespace Rynchodon.Loader
 			{
 				StableBuild = UnstableBuild = true;
 			}
-			else if ((bool)typeof(MyFinalBuildConstants).GetField("IS_STABLE").GetValue(null))
+			else if (BuildTest.IsStable())
 			{
 				StableBuild = true;
 				UnstableBuild = false;
 			}
 			else
 			{
-				StableBuild = false;
-				UnstableBuild = true;
+				// SE version will be checked, so stable will only get the release once it catches up
+				StableBuild = UnstableBuild = true;
 			}
 		}
 

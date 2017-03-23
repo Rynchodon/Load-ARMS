@@ -12,6 +12,7 @@ using RGiesecke.DllExport;
 using Sandbox;
 using Sandbox.Engine.Platform;
 using Sandbox.Graphics.GUI;
+using SpaceEngineers.Game;
 using VRage.Plugins;
 
 namespace Rynchodon.Loader
@@ -104,7 +105,8 @@ namespace Rynchodon.Loader
 		/// <param name="oAuthToken">Personal access token for GitHub, it may also be set as an environment variable.</param>
 		/// <param name="publish">If true, publish a release to GitHub</param>
 		/// <param name="versionString">The version of the release. If it is null, the highest version number from any file is used.</param>
-		public static void AddLocallyCompiledMod(IEnumerable<string> files, string author, string repo, bool allBuilds = false, string basedir = null, string oAuthToken = null, bool publish = false, string versionString = null)
+		/// <param name="seVersion">Version of Space Engineers the mod was compiled against.</param>
+		public static void AddLocallyCompiledMod(IEnumerable<string> files, string author, string repo, bool allBuilds = false, string basedir = null, string oAuthToken = null, bool publish = false, string versionString = null, int seVersion = 0)
 		{
 			if (_instance == null)
 				new LoadArms(false);
@@ -125,11 +127,26 @@ namespace Rynchodon.Loader
 				}
 			}
 
+			if (seVersion < 1)
+				seVersion = GetCurrentSEVersion();
+
 			_instance.Load();
-			ModVersion modVersion = _instance.AddLocallyCompiled(name, version, files, basedir);
+			ModVersion modVersion = _instance.AddLocallyCompiled(name, version, seVersion, files, basedir);
 
 			if (publish && GitChecks.Check(basedir, _instance._config.PathToGit))
 				ReleaseCreater.Publish(modVersion, PathExtensions.Combine(_instance._directory, "mods", name.fullName), oAuthToken);
+		}
+
+		/// <summary>
+		/// Get the current Space Engineers version from SpaceEngineersGame.
+		/// </summary>
+		/// <returns>The current version of Space Engineers.</returns>
+		public static int GetCurrentSEVersion()
+		{
+			FieldInfo field = typeof(SpaceEngineersGame).GetField("SE_VERSION", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			if (field == null)
+				throw new NullReferenceException("SpaceEngineersGame does not have field SE_VERSION, or it has unexpected binding");
+			return (int)field.GetValue(null);
 		}
 
 		[DataContract]
@@ -469,7 +486,7 @@ namespace Rynchodon.Loader
 			return true;
 		}
 
-		private ModVersion AddLocallyCompiled(ModName name, Version version, IEnumerable<string> files, string baseDir)
+		private ModVersion AddLocallyCompiled(ModName name, Version version, int seVersion, IEnumerable<string> files, string baseDir)
 		{
 			int hashCode = name.GetHashCode();
 			ModVersion current;
@@ -479,6 +496,7 @@ namespace Rynchodon.Loader
 				_data.ModsCurrentVersions.Add(hashCode, current);
 			}
 			current.version = version;
+			current.seVersion = seVersion;
 			Logger.WriteLine("mod: " + name.fullName + ", compiled version: " + current.version);
 			current.EraseAllFiles();
 

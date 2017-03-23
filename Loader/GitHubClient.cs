@@ -5,6 +5,8 @@ using System.IO.Compression;
 using System.Net;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using SpaceEngineers.Game;
 using VRage.Game;
 
 namespace Rynchodon.Loader
@@ -106,7 +108,7 @@ namespace Rynchodon.Loader
 			{
 				Logger.WriteLine("Failed to post asset(s)\n" + ex);
 				DeleteRelease(release);
-				throw ex;
+				throw;
 			}
 
 			if (!draft)
@@ -259,6 +261,8 @@ namespace Rynchodon.Loader
 				// already complained about it in depth
 				return false;
 
+			int seVersion = LoadArms.GetCurrentSEVersion();
+
 			Release mostRecent = null;
 			foreach (Release rel in releases)
 			{
@@ -267,9 +271,15 @@ namespace Rynchodon.Loader
 				if (rel.prerelease && !info.downloadPrerelease)
 					continue;
 
-				if (MyFinalBuildConstants.IS_STABLE ? rel.version.StableBuild : rel.version.UnstableBuild)
-					if (mostRecent == null || mostRecent.version.CompareTo(rel.version) < 0)
-						mostRecent = rel;
+				// skip if release was compiled with a newer version of SE
+				if (seVersion < rel.seVersion)
+					continue;
+
+				if (!BuildTest.MatchesCurrent(rel.version))
+					continue;
+
+				if (mostRecent == null || mostRecent.version.CompareTo(rel.version) < 0)
+					mostRecent = rel;
 			}
 
 			if (mostRecent == null)
@@ -278,31 +288,40 @@ namespace Rynchodon.Loader
 				return false;
 			}
 
+			Logger.WriteLine("Latest release version: " + mostRecent.version + ", Current version: " + current.version);
+
 			int relative = mostRecent.version.CompareTo(current.version);
 			if (relative == 0)
 			{
 				Logger.WriteLine("Up-to-date: " + current.version);
 				return false;
 			}
-			if (relative < 0)
+			if (relative < 0) // current version is newer than latest
 			{
-				if (current.locallyCompiled)
+				if (current.locallyCompiled && BuildTest.MatchesCurrent(current.version))
 				{
-					Logger.WriteLine("Locally compiled version: " + current.version);
+					Logger.WriteLine("Keeping locally compiled version: " + current.version);
 					return false;
 				}
 				// keep Load-ARMS from rolling back to a version that does not update itself
-				if (current.author == LoadArms.Rynchodon && current.repository == LoadArms.LoadArmsRepo && mostRecent.version.Major < 5)
+				if (current.author == LoadArms.Rynchodon && current.repository == LoadArms.LoadArmsRepo && mostRecent.version.Major < 1 && mostRecent.version.Minor < 5)
 				{
 					Logger.WriteLine("Cannot roll back to earlier version of LoadARMS");
 					return false;
 				}
-				Logger.WriteLine("Rolling back version: " + current.version);
+				Logger.WriteLine("Roll back version: " + current.version + " to " + mostRecent.version);
 			}
 
 			if (mostRecent.assets == null || mostRecent.assets.Length == 0)
 			{
 				Logger.WriteLine("ERROR: Release has no assets");
+				return false;
+			}
+
+			// warn if a locally compiled version is going to be replaced by a downloaded version
+			if (current.locallyCompiled && MessageBox.Show("Mod: " + info.fullName + "\nLocally compiled version: " + current.version + "\nLatest release version: " + mostRecent.version + "\n\nOverwrite locally compiled mod?", "Warning", MessageBoxButtons.YesNo) == DialogResult.No)
+			{
+				Logger.WriteLine("Not overwriting locally compiled mod");
 				return false;
 			}
 

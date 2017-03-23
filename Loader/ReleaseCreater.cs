@@ -21,7 +21,7 @@ namespace Rynchodon.Loader
 			[DataMember]
 			public string ZipFileName = null;
 			[DataMember]
-			public CreateRelease Release = new CreateRelease();
+			public CreateRelease Release;
 		}
 
 		public static void Publish(ModVersion modVersion, string directory, string oAuthToken)
@@ -31,8 +31,8 @@ namespace Rynchodon.Loader
 				throw new ArgumentException("Need oAuthToken");
 
 			Input input = new Input();
-			input.Release.version = modVersion.version;
-			input.Release.draft = true;
+			input.Release = new CreateRelease(modVersion.version, modVersion.seVersion, true);
+			string tag_name = input.Release.tag_name;
 
 			string zipTempFile = PathExtensions.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".zip");
 			Task compress = new Task(() => CompressFiles(zipTempFile, directory, modVersion.filePaths));
@@ -73,7 +73,7 @@ namespace Rynchodon.Loader
 				}
 
 				// force release version to match mod version
-				input.Release.version = modVersion.version;
+				input.Release.tag_name = tag_name;
 
 				Console.WriteLine("Release created");
 				compress.Wait();
