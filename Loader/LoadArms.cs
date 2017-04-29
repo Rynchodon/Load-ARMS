@@ -201,7 +201,7 @@ namespace Rynchodon.Loader
 
 			Logger.logFile = _directory + (Game.IsDedicated ? "Load-ARMS Dedicated.log" : "Load-ARMS.log");
 			Logger.WriteLine("Load-ARMS version: " + new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location), 0));
-			
+
 			if (start)
 				_task = ParallelTasks.Parallel.StartBackground(Run);
 		}
@@ -210,6 +210,7 @@ namespace Rynchodon.Loader
 		{
 			Cleanup();
 			Load();
+			VerifyDataIntegrity();
 			UpdateMods();
 			SaveData();
 		}
@@ -358,6 +359,28 @@ namespace Rynchodon.Loader
 			SaveData();
 		}
 
+		/// <summary>
+		/// Check for mod files that got deleted.
+		/// </summary>
+		private void VerifyDataIntegrity()
+		{
+			List<int> removals = new List<int>();
+			foreach (var mod in _data.ModsCurrentVersions)
+				if (mod.Value.MissingFiles())
+				{
+					Logger.WriteLine(mod.Value.fullName + " is missing files, removing");
+					mod.Value.EraseAllFiles();
+					removals.Add(mod.Key);
+				}
+
+			if (removals.Count != 0)
+			{
+				foreach (int key in removals)
+					_data.ModsCurrentVersions.Remove(key);
+				SaveData();
+			}
+		}
+
 		private void SaveConfig()
 		{
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Config));
@@ -417,9 +440,34 @@ namespace Rynchodon.Loader
 			List<IPlugin> chainedPlugins = new List<IPlugin>();
 
 			foreach (ModVersion mod in _data.ModsCurrentVersions.Values)
-				LoadPlugins(chainedPlugins, mod, loadedMods);
+				if (InConfig(mod))
+					LoadPlugins(chainedPlugins, mod, loadedMods);
+				else
+					Logger.WriteLine("Not loading " + mod.fullName + ", not in config");
 
 			return chainedPlugins;
+		}
+
+		private bool InConfig(ModName name)
+		{
+			for (int index = _config.GitHubMods.Length - 1; index >= 0; --index)
+				if (_config.GitHubMods[index].fullName == name.fullName)
+					return true;
+			return false;
+		}
+
+		private void EnsureInConfig(ModName name)
+		{
+			if (InConfig(name))
+				return;
+
+			Logger.WriteLine("Adding " + name.fullName + " to config file");
+			ModInfo[] newArray = new ModInfo[_config.GitHubMods.Length + 1];
+			_config.GitHubMods.CopyTo(newArray, 0);
+			newArray[newArray.Length - 1] = new ModInfo(name, true);
+			_config.GitHubMods = newArray;
+
+			SaveConfig();
 		}
 
 		private bool LoadPlugins(List<IPlugin> chainedPlugins, ModVersion mod, HashSet<ModVersion> loadedMods, int depth = 0)
@@ -534,6 +582,7 @@ namespace Rynchodon.Loader
 			current.filePaths = copied.ToArray();
 			current.locallyCompiled = true;
 
+			EnsureInConfig(current);
 			SaveData();
 
 			if (name.author == Rynchodon && name.repository == LoadArmsRepo)

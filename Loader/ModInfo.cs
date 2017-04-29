@@ -56,6 +56,15 @@ namespace Rynchodon.Loader
 		[DataMember]
 		public bool downloadPrerelease;
 #pragma warning restore CS0649
+
+		public ModInfo() { }
+
+		public ModInfo(ModName name, bool downloadPrerelease)
+		{
+			this.author = name.author;
+			this.repository = name.repository;
+			this.downloadPrerelease = downloadPrerelease;
+		}
 	}
 
 	/// <summary>
@@ -102,6 +111,18 @@ namespace Rynchodon.Loader
 				}
 
 			filePaths = null;
+		}
+
+		public bool MissingFiles()
+		{
+			if (filePaths == null)
+				return false;
+
+			foreach (string filePath in filePaths)
+				if (!File.Exists(filePath))
+					return true;
+
+			return false;
 		}
 	}
 }
