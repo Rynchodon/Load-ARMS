@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="Load-ARMS" Language="1033" Version="0.6.0.0" Manufacturer="Rynchodon" UpgradeCode="d44fbdc6-c0d8-491a-9f31-a0d93279a4ef">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    
+    <!-- How to package files -->
+    <Media Id="1" Cabinet="LoadARMS.cab" EmbedCab="yes" />
+
+    <!-- Get SE_DIRECTORY from registry -->
+    <Property Id="SE_DIRECTORY">
+      <RegistrySearch Id="RegistrySearch_SpaceEngineers" Type="directory" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 244850" Name="InstallLocation" />
+    </Property>
+    
+    <!-- GUI -->
+    <Property Id="WIXUI_INSTALLDIR" Value="SE_DIRECTORY" />
+    <WixVariable Id="WixUILicenseRtf" Value="..\Load-ARMS License.rtf" />
+    <UIRef Id="WixUI_InstallDir" />
+
+    <!-- Do Install -->
+		<Feature Id="CompleteInstall" Level="1">
+      <ComponentRef Id="InjectorComponent" />
+      <ComponentRef Id="LoaderComponent" />
+      <ComponentRef Id="DS_InjectorComponent" />
+      <ComponentRef Id="DS_LoaderComponent" />
+    </Feature>
+	</Product>
+
+  <!-- SE_DIRECTORY if missing from registry -->
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFiles64Folder" Name="Games">
+        <Directory Id="SteamDir" Name="Steam">
+          <Directory Id="SteamAppsDir" Name="SteamApps">
+            <Directory Id="commonDir" Name="common">
+              <Directory Id="SE_DIRECTORY" Name="SpaceEngineers" />
+            </Directory>
+          </Directory>
+        </Directory>
+			</Directory>
+		</Directory>
+	</Fragment>
+
+  <!-- Paths for Install & Remove -->
+  <Fragment>
+    <DirectoryRef Id="SE_DIRECTORY">
+      <!-- Bin64 -->
+      <Directory Id="SE_BIN" Name="Bin64">
+        <Component Id="InjectorComponent" Win64="yes">
+          <File Source="$(var.Injector.TargetPath)" />
+        </Component>
+        <Component Id="LoaderComponent" Win64="yes">
+          <File Source="$(var.Loader.TargetPath)" />
+        </Component>
+      </Directory>
+      
+      <!-- DedicatedServer64 -->
+      <Directory Id="SE_DS_BIN" Name="DedicatedServer64">
+        <Component Id="DS_InjectorComponent" Win64="yes">
+          <File Id="DsInjFile" Source="$(var.Injector.TargetPath)" />
+        </Component>
+        <Component Id="DS_LoaderComponent" Win64="yes">
+          <File Id="DsLoadFile" Source="$(var.Loader.TargetPath)" />
+        </Component>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+</Wix>
