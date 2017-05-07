@@ -128,7 +128,6 @@ namespace Rynchodon.Injector
 				}
 				else
 				{
-					Console.WriteLine("Not a file: " + Path.GetFullPath(a));
 					PrintHelp(opts);
 					throw new ArgumentException("Invalid argument: " + a);
 				}
