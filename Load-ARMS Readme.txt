@@ -2,9 +2,14 @@ Extend Whitelist will be removed when you run Load-ARMS.
 
 The scripts will run only alongside the models, which are distributed via steam.
 
+Install
+=======
+Run SetupLoadArms.msi, ignore the other files in the .zip.
+Load-ARMS can be uninstalled from add/remove programs.
+
 Usage
 =====
-Unpack to ...\SpaceEngineers\Bin64, run LoadARMS.exe.
+Run ...\SpaceEngineers\Bin64\LoadARMS.exe.
 If the game is not running, LoadARMS will start it. If the game is running, ARMS will be loaded into the running game. You will need to reload any running world.
 LoadARMS must be run every time you launch Space Engineers.
 

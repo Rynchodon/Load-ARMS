@@ -575,7 +575,7 @@ namespace Rynchodon.Loader
 					throw new ArgumentException("Cannot construct relative path from " + fullPathSource + " using " + baseDir);
 
 				Logger.WriteLine("Copy: " + fileSource + " to " + fileDestination);
-				File.Copy(fullPathSource, fileDestination);
+				File.Copy(fullPathSource, fileDestination, true);
 				copied.Add(fileDestination);
 			}
 
